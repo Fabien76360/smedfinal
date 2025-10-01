@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>SMED L29 – Suivi changement de PO</title>
 <style>
 :root {
@@ -1138,6 +1141,8 @@ summary { cursor:pointer; }
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 <script>
 (() => {
+  // --- Version de build (à mettre à jour à chaque nouvelle release) ---
+  const APP_VERSION = '2025-10-01_v03';
   const STORAGE_KEY = 'smed_timer_v3';
   const SCHEMA_VERSION = 5;
   const phasesList = ['Activité CHGT de PO','Début de PO','Fin de PO','Vide de ligne'];
@@ -1266,7 +1271,37 @@ summary { cursor:pointer; }
     splash: document.getElementById('splash')
   };
 
+  // --- Cache-buster images pour refléter la build courante ---
+  (function cacheBustImages(){
+    try {
+      const stamp = encodeURIComponent(APP_VERSION);
+      document.querySelectorAll('img.logo-image').forEach(img => {
+        const u = new URL(img.getAttribute('src'), location.href);
+        u.searchParams.set('v', stamp);
+        img.setAttribute('src', u.toString());
+      });
+    } catch (_) {}
+  })();
+
   let state = migrate(loadState());
+  // --- Purge automatique si la version de build change ---
+  try {
+    const stored = (state && typeof state === 'object') ? state.app_version : null;
+    if (stored !== APP_VERSION) {
+      try { localStorage.removeItem(STORAGE_KEY); } catch(_) {}
+      state = DEFAULT_STATE();
+      state.app_version = APP_VERSION;
+      saveState(false); // ne pas afficher de toast ici
+    } else {
+      state.app_version = APP_VERSION;
+    }
+  } catch (_) {
+    // En cas de souci, on repart propre
+    try { localStorage.removeItem(STORAGE_KEY); } catch(__) {}
+    state = DEFAULT_STATE();
+    state.app_version = APP_VERSION;
+    saveState(false);
+  }
   const runtime = {
     activePage: 'timerPage',
     animationFrame: null,
@@ -1381,6 +1416,7 @@ summary { cursor:pointer; }
         copy.completedOpsByOp[op][ph] = Array.from(state.completedOpsByOp[op][ph]);
       });
     });
+    copy.app_version = APP_VERSION;
     return copy;
   }
 
