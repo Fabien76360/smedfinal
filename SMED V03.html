@@ -1,0 +1,3171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SMED L29 – Suivi changement de PO</title>
+<style>
+:root {
+  --bg:#0f1a34;
+  --panel:#172447;
+  --fg:#e8eefc;
+  --accent:#3ddc97;
+  --warn:#ffb703;
+  --danger:#ef476f;
+  --muted:#7b87a6;
+  --shadow:0 20px 40px rgba(7,14,33,.55);
+  --radius-xl:28px;
+  --radius-lg:20px;
+  --radius:14px;
+  --radius-sm:10px;
+  --focus:0 0 0 3px rgba(61,220,151,.35);
+  color-scheme:dark;
+}
+* { box-sizing:border-box; }
+html,body { height:100%; }
+body {
+  margin:0;
+  font-family:"Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  background:radial-gradient(140% 140% at 50% 0%,#1a2b55 0%,#0f1a34 45%,#09112a 100%);
+  color:var(--fg);
+}
+body.splash-lock { overflow:hidden; }
+button,input,select,textarea { font:inherit; color:inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
+  outline:3px solid var(--accent);
+  outline-offset:2px;
+}
+.app {
+  min-height:100%;
+  display:grid;
+  grid-template-rows:auto 1fr;
+}
+header {
+  padding:20px clamp(16px,3vw,40px) 0;
+}
+.top-nav {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.header-actions {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:12px;
+  margin-left:auto;
+}
+.brand {
+  display:inline-flex;
+  align-items:center;
+  gap:12px;
+  font-weight:700;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--fg);
+}
+.brand-sep {
+  width:1px;
+  height:28px;
+  background:rgba(232,238,252,.35);
+}
+.brand-line {
+  font-size:1rem;
+  letter-spacing:0.12em;
+}
+.nav-tabs {
+  display:flex;
+  gap:12px;
+  margin-left:56px;
+}
+.nav-tabs button {
+  background:transparent;
+  border:1px solid rgba(255,255,255,.12);
+  color:var(--fg);
+  border-radius:999px;
+  padding:10px 18px;
+  cursor:pointer;
+  transition:background .2s ease, transform .2s ease, border-color .2s ease;
+  min-width:120px;
+}
+.nav-tabs button.active {
+  background:var(--accent);
+  color:#021221;
+  border-color:transparent;
+  transform:translateY(-1px);
+}
+main {
+  padding:0 clamp(16px,3vw,40px) 40px;
+  display:grid;
+}
+.page {
+  display:none;
+}
+.page.active {
+  display:grid;
+  gap:24px;
+}
+.timer-grid {
+  display:grid;
+  gap:24px;
+}
+@media (min-width:1200px) {
+  .timer-grid {
+    grid-template-columns: minmax(0,1fr) 360px;
+  }
+}
+body.journal-hidden #journalAside {
+  display:none;
+}
+body.journal-hidden .timer-grid {
+  grid-template-columns:1fr !important;
+}
+.panel {
+  background:rgba(23,36,71,.86);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:var(--radius-xl);
+  padding:24px;
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(16px);
+}
+.panel.compact { padding:18px; border-radius:var(--radius-lg); }
+.panel-title {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  margin-bottom:18px;
+}
+.panel-title h2 {
+  margin:0;
+  font-size:1.1rem;
+  letter-spacing:.02em;
+}
+.grid-two {
+  display:grid;
+  gap:16px;
+}
+@media (min-width:840px) {
+  .grid-two {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+.id-row {
+  display:grid;
+  gap:12px;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+}
+.field label {
+  display:grid;
+  gap:6px;
+  font-size:0.76rem;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:var(--muted);
+}
+.field input, .field select {
+  border-radius:var(--radius);
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(15,26,52,.65);
+  padding:12px 14px;
+  min-height:48px;
+}
+.field input[readonly] {
+  opacity:.7;
+}
+.timer-shell {
+  display:grid;
+  gap:24px;
+}
+.timer-top {
+  display:grid;
+  gap:20px;
+}
+.timer-bar {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:stretch;
+  justify-content:center;
+  gap:18px;
+}
+.timer-bar > * {
+  flex:1 1 260px;
+}
+.chrono-card{
+  display:grid; grid-template-columns:1fr auto; gap:20px;
+  align-items:center; padding:18px 22px; border-radius:999px;
+  background:linear-gradient(140deg,rgba(13,28,61,.8),rgba(61,220,151,.12));
+  border:1px solid rgba(61,220,151,.35);
+}
+.chrono-main{display:grid; justify-items:center; gap:6px}
+.chrono-display{font-variant-numeric:tabular-nums; font-size:3rem; font-weight:700}
+.chrono-state{font-size:.8rem; color:var(--muted); letter-spacing:.08em; text-transform:uppercase}
+.chrono-meta{display:flex; gap:16px}
+.chrono-meta .meta{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+  padding:10px 14px; border-radius:14px; min-width:120px; text-align:center}
+.chrono-meta .value{font-weight:700; font-size:1.1rem}
+.chrono-meta small{opacity:.8}
+.main-actions {
+  display:flex;
+  flex:2 1 320px;
+  gap:12px;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-items:stretch;
+}
+.main-actions button {
+  flex:1 1 160px;
+  min-height:52px;
+}
+@media (max-width:1279px) {
+  .main-actions {
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .main-actions button {
+    width:100%;
+  }
+}
+@media (max-width:900px) {
+  .timer-bar > * {
+    flex:1 1 100%;
+  }
+}
+.round-pill {
+  background:rgba(9,18,40,.85);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:999px;
+  padding:12px 20px;
+  display:grid;
+  gap:6px;
+  text-align:center;
+  min-width:220px;
+}
+.round-pill strong {
+  font-size:1.2rem;
+  letter-spacing:.05em;
+}
+#display {
+  font-variant-numeric:tabular-nums;
+  font-size:3rem;
+  line-height:1;
+  font-weight:700;
+}
+.main-actions {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:12px;
+}
+button.primary {
+  background:var(--accent);
+  color:#021221;
+  font-weight:700;
+}
+button.secondary {
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.16);
+  color:var(--fg);
+}
+button.danger { background:var(--danger); border-color:transparent; }
+button.warn { background:var(--warn); border-color:transparent; color:#051933; }
+button.ghost { background:transparent; border:1px solid rgba(255,255,255,.18); }
+button {
+  border-radius:var(--radius);
+  border:none;
+  padding:12px 18px;
+  font-weight:600;
+  cursor:pointer;
+  min-height:48px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  transition:transform .2s ease, background .2s ease;
+}
+button:disabled {
+  cursor:not-allowed;
+  opacity:.5;
+  transform:none !important;
+}
+button:not(:disabled):active { transform:translateY(1px); }
+.icon { font-family:"Fira Code", monospace; font-size:1rem; }
+.progress-bar {
+  width:100%;
+  height:14px;
+  background:rgba(255,255,255,.08);
+  border-radius:999px;
+  overflow:hidden;
+}
+.progress-value {
+  width:0%;
+  height:100%;
+  background:var(--accent);
+  transition:width .2s ease, background .2s ease;
+}
+#state { text-transform:uppercase; letter-spacing:0.12em; font-size:0.75rem; color:var(--muted); text-align:center; }
+#now { font-variant-numeric:tabular-nums; font-size:0.85rem; color:var(--muted); text-align:right; }
+.badge {
+  border-radius:999px;
+  padding:6px 12px;
+  font-size:0.75rem;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  background:rgba(255,255,255,.12);
+  color:var(--muted);
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.badge.hc { background:rgba(255,255,255,.08); color:var(--warn); border:1px solid rgba(255,183,3,.4); }
+#progress { margin-top:-12px; }
+.phase-chips {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.phase-chip {
+  background:rgba(15,26,52,.8);
+  border:1px solid rgba(255,255,255,.12);
+  color:var(--fg);
+  padding:10px 18px;
+  border-radius:999px;
+  cursor:pointer;
+  min-height:48px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  transition:transform .2s ease, border-color .2s ease, background .2s ease;
+}
+.phase-chip.active {
+  background:var(--accent);
+  color:#021221;
+  border-color:transparent;
+}
+.phase-chip .dot {
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.3);
+}
+.phase-chip[data-phase="Activité CHGT de PO"] .dot { background:var(--warn); }
+.phase-chip[data-phase="Début de PO"] .dot { background:#7ad3ff; }
+.phase-chip[data-phase="Fin de PO"] .dot { background:#9b8dff; }
+.phase-chip[data-phase="Vide de ligne"] .dot { background:#ff7ad9; }
+.ops-columns {
+  display:grid;
+  gap:16px;
+}
+@media (min-width:960px) {
+  .ops-columns {
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  }
+}
+.operator-card {
+  background:rgba(9,18,40,.7);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--radius-lg);
+  padding:18px;
+  display:grid;
+  gap:16px;
+  min-height:220px;
+}
+.operator-card.focused {
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px rgba(61,220,151,.35);
+}
+/* Colonne + pastille opérateur */
+.op-col{display:grid;gap:10px;align-content:start}
+.operator-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:10px 16px;border-radius:999px;
+  background:rgba(61,220,151,.15);border:1px solid rgba(61,220,151,.55);
+  color:var(--fg);font-weight:700;letter-spacing:.02em;min-height:42px;font-size:.95rem;
+  backdrop-filter:blur(8px);
+}
+.operator-badge.focused{box-shadow:0 0 0 3px rgba(61,220,151,.28);background:rgba(61,220,151,.22)}
+.operator-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+}
+.operator-header h3 {
+  margin:0;
+  font-size:1rem;
+}
+.operator-header .progress-text { font-size:0.75rem; letter-spacing:0.08em; color:var(--muted); }
+.op-list {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.op-item { display:grid; gap:8px; }
+.op-item-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.details-chip {
+  padding:8px 14px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.08);
+  font-size:0.75rem;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:color .2s ease, border-color .2s ease, background .2s ease;
+}
+.details-chip.has-content {
+  border-color:rgba(61,220,151,.55);
+  color:var(--accent);
+  background:rgba(61,220,151,.12);
+}
+.details-chip[aria-expanded="true"] {
+  border-color:var(--accent);
+  background:rgba(61,220,151,.18);
+  color:var(--accent);
+}
+.details-chip.is-empty { opacity:.6; }
+.details-chip:focus-visible,
+.details-chip:hover {
+  border-color:var(--accent);
+  color:var(--accent);
+}
+.op-details {
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:var(--radius);
+  background:rgba(255,255,255,.05);
+  padding:12px 14px;
+  font-size:0.85rem;
+  line-height:1.5;
+  color:var(--fg);
+  display:none;
+  animation:detailsIn .25s ease;
+}
+.op-details.open { display:block; }
+@keyframes detailsIn {
+  from { opacity:0; transform:translateY(-4px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.op-pill {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px 14px;
+  border-radius:var(--radius);
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(23,36,71,.8);
+  cursor:pointer;
+  position:relative;
+  min-height:48px;
+  transition:transform .2s ease, background .2s ease, border-color .2s ease;
+}
+.op-pill .index {
+  width:28px;
+  height:28px;
+  border-radius:999px;
+  background:rgba(255,255,255,.1);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:600;
+}
+.op-pill.current {
+  border-color:var(--accent);
+  outline:2px solid rgba(61,220,151,.35);
+  transform:scale(1.08);
+}
+.op-pill.done {
+  background:rgba(61,220,151,.15);
+  border-color:rgba(61,220,151,.6);
+  transform:scale(0.84);
+  color:var(--accent);
+}
+.op-pill.done .index { background:rgba(61,220,151,.45); color:#021221; }
+.op-pill.done .check { display:inline; }
+.check { display:none; font-weight:700; }
+.log-table-wrapper {
+  max-height:420px;
+  overflow:auto;
+  border-radius:var(--radius-lg);
+  border:1px solid rgba(255,255,255,.1);
+}
+table { width:100%; border-collapse:collapse; font-size:0.9rem; }
+th,td {
+  padding:12px 14px;
+  border-bottom:1px solid rgba(255,255,255,.05);
+}
+th {
+  position:sticky;
+  top:0;
+  background:rgba(12,22,46,.95);
+  text-align:left;
+  font-size:0.75rem;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}
+tbody tr:hover { background:rgba(255,255,255,.04); }
+td.note-cell {
+  min-width:200px;
+}
+td.note-cell[contenteditable="true"] {
+  outline:none;
+}
+tfoot td { font-weight:700; }
+.label-muted { color:var(--muted); font-size:0.8rem; }
+.actions-row {
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+}
+#fullscreen {
+  justify-self:flex-end;
+}
+.chip-row {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.chip {
+  padding:10px 16px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.06);
+  cursor:pointer;
+}
+.chip.active {
+  background:var(--accent);
+  color:#021221;
+  border-color:transparent;
+}
+.toast-container {
+  position:fixed;
+  bottom:24px;
+  right:24px;
+  display:grid;
+  gap:12px;
+  z-index:2000;
+}
+.toast {
+  background:rgba(15,26,52,.92);
+  border:1px solid rgba(61,220,151,.35);
+  border-radius:var(--radius);
+  padding:12px 16px;
+  min-width:220px;
+  box-shadow:var(--shadow);
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.toast .icon { color:var(--accent); }
+.tag { padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.1); font-size:0.7rem; letter-spacing:0.08em; }
+/* Parameters */
+.section-group { display:grid; gap:20px; }
+.general-panel { display:grid; gap:20px; }
+.general-settings-bar {
+  display:flex;
+  flex-wrap:wrap;
+  gap:16px;
+  align-items:stretch;
+}
+.param-tile {
+  background:rgba(15,26,52,.78);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--radius-lg);
+  padding:18px;
+  display:grid;
+  gap:12px;
+  min-width:220px;
+  flex:1 1 240px;
+}
+.param-tile h3 {
+  margin:0;
+  font-size:0.85rem;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:var(--muted);
+}
+.general-actions {
+  margin-left:auto;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  align-self:stretch;
+  justify-content:flex-end;
+}
+.events-panel { display:grid; gap:16px; }
+.event-form {
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  align-items:flex-end;
+}
+.event-form .field { flex:1 1 240px; }
+.event-form button { align-self:flex-end; min-height:48px; }
+.events-list {
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:grid;
+  gap:10px;
+}
+.events-list li {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  background:rgba(9,18,40,.6);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--radius);
+  padding:10px 14px;
+}
+.events-list li span { flex:1; }
+.events-list li button {
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:999px;
+  padding:6px 12px;
+  background:rgba(255,255,255,.06);
+  cursor:pointer;
+}
+.events-list li button:hover { border-color:var(--danger); color:var(--danger); }
+.events-list .empty { color:var(--muted); font-style:italic; }
+.phases-panel {
+  display:grid;
+  gap:24px;
+}
+@media (max-width:900px) {
+  .general-actions {
+    width:100%;
+    flex-direction:row;
+    justify-content:flex-end;
+  }
+  .general-actions button {
+    flex:1 1 auto;
+  }
+}
+.switch-row { display:flex; align-items:center; gap:12px; }
+.switch-row input[type="checkbox"] { width:50px; height:26px; border-radius:999px; appearance:none; background:rgba(255,255,255,.08); position:relative; cursor:pointer; }
+.switch-row input[type="checkbox"]::after {
+  content:"";
+  position:absolute;
+  top:3px; left:3px;
+  width:20px; height:20px;
+  border-radius:999px;
+  background:#fff;
+  transition:transform .2s ease;
+}
+.switch-row input[type="checkbox"]:checked { background:var(--accent); }
+.switch-row input[type="checkbox"]:checked::after { transform:translateX(24px); background:#021221; }
+.phase-table-wrapper {
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--radius-lg);
+  overflow:auto;
+  max-height:360px;
+}
+.param-table { width:100%; border-collapse:separate; border-spacing:0; min-width:520px; }
+.param-table thead th {
+  position:sticky;
+  top:0;
+  background:rgba(12,22,46,.95);
+  text-align:left;
+  z-index:1;
+}
+.param-table tbody tr { background:rgba(9,18,40,.6); }
+.param-table td { border-bottom:1px solid rgba(255,255,255,.05); padding:10px 12px; }
+.param-table tbody tr.dragging { opacity:.4; }
+.row-tools { display:flex; gap:8px; }
+.batch-actions { display:flex; flex-wrap:wrap; gap:10px; }
+.import-group {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  padding:12px 18px;
+  border-radius:var(--radius);
+  border:1px solid rgba(255,255,255,.18);
+  background:transparent;
+  font-weight:600;
+  cursor:pointer;
+  min-height:48px;
+  color:inherit;
+  transition:color .2s ease, border-color .2s ease;
+}
+.import-group:hover,
+.import-group:focus-within {
+  border-color:var(--accent);
+  color:var(--accent);
+}
+.import-group input[type="file"] { display:none; }
+textarea { background:rgba(15,26,52,.8); border:1px solid rgba(255,255,255,.12); border-radius:var(--radius); padding:12px; min-height:110px; }
+.param-table textarea {
+  min-height:72px;
+  resize:vertical;
+  width:100%;
+  color:inherit;
+}
+summary { cursor:pointer; }
+/* Analysis */
+.analysis-grid { display:grid; gap:20px; }
+@media (min-width:1280px) {
+  .analysis-grid { grid-template-columns:400px minmax(0,1fr); }
+}
+.kpi-grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
+.kpi-card { background:rgba(9,18,40,.7); border-radius:var(--radius-lg); padding:16px; border:1px solid rgba(255,255,255,.08); display:grid; gap:6px; }
+.kpi-card strong { font-size:1.3rem; font-variant-numeric:tabular-nums; }
+.bar-chart { display:grid; gap:14px; }
+.bar-row { display:grid; gap:6px; }
+.bar-row .label { font-size:0.85rem; color:var(--muted); display:flex; justify-content:space-between; }
+.bar-row .bar {
+  height:12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  overflow:hidden;
+}
+.bar-row .fill {
+  height:100%;
+  background:var(--accent);
+  transition:width .3s ease;
+}
+.list-card { display:grid; gap:12px; }
+.list-card ol, .list-card ul { margin:0; padding-left:20px; display:grid; gap:8px; }
+.list-card li { font-size:0.9rem; }
+.bad { color:var(--danger); }
+.notice { padding:14px 16px; background:rgba(255,255,255,.08); border-radius:var(--radius); }
+.quick-event-menu {
+  position:absolute;
+  background:rgba(15,26,52,.95);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:var(--radius);
+  padding:8px;
+  display:grid;
+  gap:6px;
+  min-width:220px;
+  z-index:3000;
+  box-shadow:var(--shadow);
+}
+.quick-event-menu button {
+  background:transparent;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:var(--radius);
+  padding:8px 10px;
+  color:var(--fg);
+  text-align:left;
+  cursor:pointer;
+}
+.quick-event-menu button:hover,
+.quick-event-menu button:focus-visible {
+  border-color:var(--accent);
+  color:var(--accent);
+}
+.done-group{margin-bottom:6px}
+.done-group summary{
+  list-style:none; cursor:pointer; user-select:none;
+  padding:8px 12px; border-radius:12px; font-size:.85rem;
+  background:rgba(61,220,151,.10); border:1px solid rgba(61,220,151,.35);
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+}
+.done-group summary::-webkit-details-marker{display:none}
+.done-group .count{opacity:.8; font-variant-numeric:tabular-nums}
+.done-list{display:flex; flex-direction:column; gap:10px; padding-top:8px}
+#openReport{
+  background: var(--accent); color:#021221; font-weight:800;
+  padding:12px 18px; border-radius:999px; box-shadow:0 10px 24px rgba(61,220,151,.25);
+}
+#openReport:hover{ transform: translateY(-1px); }
+.pill-actions{
+  margin-left:auto;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.op-pill .note-btn,
+.pill-actions .pill-action{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 12px;
+  min-width:64px;
+  min-height:40px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.10);
+  border-radius:999px;
+  font-size:.9rem;
+  line-height:1;
+  cursor:pointer;
+}
+.op-pill .note-btn:hover,
+.op-pill .note-btn:focus-visible,
+.pill-actions .pill-action:hover,
+.pill-actions .pill-action:focus-visible{
+  border-color: var(--accent);
+  box-shadow: var(--focus);
+}
+.op-pill .note-btn.has-note{
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(61,220,151,.10);
+}
+.pill-actions .pill-action--ghost{
+  background:rgba(255,255,255,.06);
+  min-width:auto;
+  padding:8px 14px;
+}
+#splash {
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:48px 16px;
+  background:radial-gradient(120% 120% at 50% 15%,rgba(20,34,74,.95) 0%,rgba(6,12,28,.98) 70%,rgba(3,7,18,1) 100%);
+  transition:opacity .6s ease;
+}
+#splash::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at center,rgba(61,220,151,.05) 0%,rgba(15,26,52,0) 55%);
+  pointer-events:none;
+}
+#splash.is-hiding{
+  opacity:0;
+  pointer-events:none;
+}
+.splash-vignette{
+  position:relative;
+  display:grid;
+  gap:18px;
+  justify-items:center;
+  padding:36px clamp(32px,5vw,56px);
+  border-radius:28px;
+  background:linear-gradient(148deg,rgba(15,26,52,.92) 0%,rgba(23,36,71,.88) 100%);
+  border:1px solid rgba(255,255,255,.06);
+  box-shadow:0 30px 80px rgba(7,14,33,.55);
+  overflow:hidden;
+  animation:splashZoomIn 900ms cubic-bezier(.16,1,.3,1) forwards;
+}
+.splash-vignette::before{
+  content:"";
+  position:absolute;
+  inset:-35% -20%;
+  background:radial-gradient(circle at 50% 20%,rgba(255,255,255,.12) 0%,rgba(255,255,255,0) 60%);
+  opacity:.35;
+  pointer-events:none;
+}
+.splash-vignette::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  box-shadow:0 0 0 0 rgba(61,220,151,.28);
+  animation:splashGlow 2200ms ease-in-out infinite;
+  pointer-events:none;
+}
+.splash-logo-wrap{
+  position:relative;
+  display:grid;
+  justify-items:center;
+  width:clamp(220px,22vw,420px);
+}
+.splash-logo{
+  width:100%;
+  height:auto;
+  filter:drop-shadow(0 18px 32px rgba(0,0,0,.45));
+}
+.splash-logo-fallback{
+  font-weight:800;
+  letter-spacing:.16em;
+  font-size:clamp(2.6rem,8vw,4.5rem);
+}
+.splash-caption{
+  font-size:.9rem;
+  opacity:.7;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.logo-container{
+  display:grid;
+  place-items:center;
+}
+.logo-image{ display:block; }
+.logo-container .logo-fallback-text{
+  display:none;
+}
+.logo-container.logo-missing .logo-image{ display:none; }
+.logo-container.logo-missing .logo-fallback-text{ display:block; }
+.brand-mark{
+  width:44px;
+  height:44px;
+  display:grid;
+  place-items:center;
+}
+.brand-logo{ width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 6px 16px rgba(0,0,0,.35)); }
+.brand-logo-fallback{ font-weight:800; letter-spacing:.12em; font-size:.95rem; }
+@keyframes splashZoomIn{
+  0%{ transform:scale(.84); opacity:0; }
+  100%{ transform:scale(1); opacity:1; }
+}
+@keyframes splashGlow{
+  0%,100%{ box-shadow:0 0 0 0 rgba(61,220,151,.18); }
+  50%{ box-shadow:0 0 25px 10px rgba(61,220,151,.22); }
+}
+@media print {
+  body { background:#fff; color:#000; }
+  .app { display:block; }
+  header, .nav-tabs, #fullscreen, .toast-container { display:none !important; }
+  main { padding:0; }
+  .panel { background:#fff !important; border:1px solid #ccc; box-shadow:none; }
+  .page { display:block !IMPORTANT; }
+  .ops-columns, .kpi-grid, .bar-chart { page-break-inside:avoid; }
+}
+/* PATCH SMED — styles opérateur */
+.operator-header .meta-line{ display:flex; align-items:center; gap:10px; font-variant-numeric: tabular-nums; }
+.operator-header .meta-line .time{ font-weight:700; }
+.operator-header .meter{
+  height:4px; border-radius:999px; background:rgba(255,255,255,.08); overflow:hidden; margin-top:6px;
+}
+.operator-header .meter .fill{ height:100%; background:var(--accent); width:0%; transition:width .25s ease; }
+.operator-card .op-pill.current{ box-shadow:0 0 0 2px rgba(61,220,151,.45), 0 0 16px rgba(61,220,151,.25) inset; }
+.operator-card .op-pill.current::before{ content:"▶"; margin-right:8px; opacity:.9; }
+.badge.time-ok{ color:var(--accent); }
+.badge.time-warn{ color:var(--warn); }
+.badge.time-bad{ color:var(--danger); }
+.ops-toolbar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+/* PATCH op-event */
+.op-evt-btn{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:8px 12px; border-radius:999px;
+  background:rgba(61,220,151,.12);
+  border:1px solid rgba(61,220,151,.35);
+  color:var(--fg); font-size:.85rem; cursor:pointer;
+}
+.op-evt-btn:hover{ box-shadow:0 0 0 2px rgba(61,220,151,.25); }
+</style>
+</head>
+<body>
+<div id="splash" role="dialog" aria-label="Écran de lancement">
+  <div class="splash-vignette">
+    <div class="splash-logo-wrap logo-container">
+      <img src="smed-logo.png" alt="Logo SMED" class="splash-logo logo-image">
+      <span class="splash-logo-fallback logo-fallback-text" aria-hidden="true">SMED</span>
+    </div>
+    <div class="splash-caption">Chargement du tableau de bord…</div>
+  </div>
+</div>
+<div class="app">
+  <header>
+    <div class="top-nav">
+      <div class="brand">
+        <div class="brand-mark logo-container">
+          <img src="smed-logo.png" alt="SMED" class="brand-logo logo-image">
+          <span class="brand-logo-fallback logo-fallback-text" aria-hidden="true">SMED</span>
+        </div>
+        <span class="brand-sep" aria-hidden="true"></span>
+        <span class="brand-line" id="brandLine">L29</span>
+      </div>
+      <div class="nav-tabs" role="tablist">
+        <button type="button" data-target="timerPage" class="active" aria-controls="timerPage" aria-selected="true">SMED</button>
+        <button type="button" data-target="analysisPage" aria-controls="analysisPage" aria-selected="false">Analyse</button>
+        <button type="button" data-target="paramsPage" aria-controls="paramsPage" aria-selected="false">Paramètres</button>
+      </div>
+      <div class="header-actions">
+        <button id="toggleJournal" class="ghost" type="button" aria-pressed="false" title="Afficher/Masquer Journal"><span class="icon">🗂</span>Masquer le journal</button>
+        <button id="fullscreen" class="ghost" type="button" aria-label="Plein écran"><span class="icon">⤢</span>Plein écran</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <section id="timerPage" class="page active" aria-labelledby="Timer">
+      <div class="timer-grid">
+        <div class="panel">
+          <div class="timer-shell">
+            <div class="id-row">
+              <div class="field"><label>Ligne<input id="line" type="text" placeholder="Code ligne"></label></div>
+              <div class="field"><label>PO<input id="po" type="text" placeholder="Ordre de production"></label></div>
+              <div class="field"><label>Mode<select id="mode"><option value="up">Chrono croissant</option><option value="down">Chrono décroissant</option></select></label></div>
+            </div>
+            <div class="timer-top">
+              <div class="timer-bar">
+                <div class="chrono-card">
+                  <div class="chrono-main">
+                    <div class="chrono-title label-muted">Chronomètre</div>
+                    <div id="display" class="chrono-display">00:00:00</div>
+                    <div id="state" class="chrono-state">Prêt</div>
+                  </div>
+                  <div class="chrono-meta">
+                    <div class="meta">
+                      <div class="label-muted">Cible</div>
+                      <div class="value"><span id="targetMin">0</span> <small>min</small></div>
+                    </div>
+                    <div class="meta">
+                      <div class="label-muted">Alerte</div>
+                      <div class="value"><span id="warnMin">0</span> <small>min</small></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="main-actions">
+                  <button id="start" class="primary" type="button"><span class="icon">▶</span>Démarrer</button>
+                  <!-- PATCH op-event: libellé bouton mis à jour -->
+                  <button id="lap" class="secondary" type="button"><span class="icon">✦</span>Évènement Hors changement</button>
+                  <button id="end" class="warn" type="button"><span class="icon">■</span>Fin du changement</button>
+                  <button id="reset" class="danger" type="button"><span class="icon">↺</span>Reset session</button>
+                </div>
+              </div>
+              <div class="progress-bar" id="progress" aria-hidden="true"><div class="progress-value"></div></div>
+              <div class="chip-row" id="phaseChips" role="tablist"></div>
+              <div class="label-muted" id="now"></div>
+            </div>
+            <!-- PATCH SMED — toolbar opérateurs -->
+            <div id="opsToolbar" class="ops-toolbar" aria-label="Outils affichage opérations">
+              <!-- PATCH rm-toggle: suppression du toggle "Montrer seulement la courante" -->
+              <button id="undoLast" type="button" class="ghost">↺ Annuler dernière</button>
+              <span id="hcMini" class="badge" style="display:none;"></span>
+            </div>
+            <div class="ops-columns" id="opsPhaseChips"></div>
+          </div>
+        </div>
+        <aside id="journalAside" class="panel compact">
+          <div class="panel-title">
+            <h2>Journal</h2>
+            <div class="badge" id="logCount">0 entrées</div>
+          </div>
+          <div class="log-table-wrapper" role="region" aria-live="polite">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Horodatage</th>
+                  <th>Durée</th>
+                  <th>HC</th>
+                  <th>Phase</th>
+                  <th>Opérateur</th>
+                  <th>Libellé</th>
+                  <th>Note</th>
+                </tr>
+              </thead>
+              <tbody id="logTable"></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="2">Total chrono</td>
+                  <td id="totalCell">00:00:00</td>
+                  <td colspan="5"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div class="actions-row" style="margin-top:16px;">
+            <button id="exportCsv" class="ghost" type="button">Exporter CSV</button>
+            <button id="exportHtml" class="ghost" type="button">Exporter rapport</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+    <section id="paramsPage" class="page" aria-labelledby="Paramètres">
+      <div class="panel general-panel">
+        <div class="panel-title"><h2>Paramètres généraux</h2><div class="badge">Auto-save actif</div></div>
+        <div class="general-settings-bar">
+          <div class="param-tile">
+            <h3>Opérateurs</h3>
+            <div class="field"><label>Opérateur 1<input type="text" id="op1"></label></div>
+            <div class="field"><label>Opérateur 2<input type="text" id="op2"></label></div>
+            <div class="field"><label>Opérateur 3<input type="text" id="op3"></label></div>
+            <div class="field"><label>Opérateur 4<input type="text" id="op4"></label></div>
+          </div>
+          <div class="param-tile">
+            <h3>Assignations</h3>
+            <div class="field"><label>Opérateur par défaut<select id="defaultOperator"></select></label></div>
+            <div class="switch-row"><input id="multiView" type="checkbox"><label for="multiView">Vue multi-opérateurs</label></div>
+          </div>
+          <div class="param-tile">
+            <h3>Alerte</h3>
+            <div class="field"><label>Alerte (min)<input type="number" step="0.5" id="alertInput"></label></div>
+            <button id="suggestAlert" type="button" class="ghost">Suggérer 85 %</button>
+          </div>
+          <div class="general-actions">
+            <button id="saveParams" class="primary" type="button">Sauvegarder</button>
+            <button id="resetParams" class="danger" type="button">Réinitialiser</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel compact events-panel">
+        <div class="panel-title"><h2>Évènements prédéfinis</h2><span class="label-muted">Utilisés par l'événement rapide</span></div>
+        <form id="eventForm" class="event-form">
+          <div class="field">
+            <label>Nouvel événement<input type="text" id="eventInput" placeholder="Libellé d'événement"></label>
+          </div>
+          <button type="submit" class="ghost">Ajouter</button>
+        </form>
+        <ul id="eventsList" class="events-list"></ul>
+      </div>
+      <div class="panel compact phases-panel">
+        <div class="panel-title"><h2>Phases et opérations</h2><span class="label-muted">Glisser-déposer pour réordonner</span></div>
+        <div id="phaseTables"></div>
+      </div>
+    </section>
+    <section id="analysisPage" class="page" aria-labelledby="Analyse">
+      <div class="panel">
+        <div class="panel-title"><h2>Analyse</h2><div class="chip" id="openReport">Rapport</div><button id="refreshAnalysis" class="ghost" type="button">Rafraîchir</button></div>
+        <div class="analysis-grid">
+          <div class="panel compact list-card">
+            <div class="kpi-grid" id="kpiGrid"></div>
+            <div class="list-card">
+              <h3>Top contributeurs à l'écart</h3>
+              <ol id="topContrib"></ol>
+            </div>
+            <div class="list-card">
+              <h3>Top opérations longues</h3>
+              <ol id="topOps"></ol>
+            </div>
+            <div class="list-card">
+              <h3>Perturbateurs fréquents</h3>
+              <ul id="perturbateurs"></ul>
+            </div>
+          </div>
+          <div class="panel compact list-card">
+            <div class="panel-title"><h3>Répartition par phases</h3><span id="phaseDistributionTarget" class="label-muted"></span></div>
+            <div class="bar-chart" id="phaseDistribution"></div>
+            <div class="panel-title"><h3>Répartition par opérateurs</h3><span id="operatorDistributionTarget" class="label-muted"></span></div>
+            <div class="bar-chart" id="operatorDistribution"></div>
+            <div class="panel-title"><h3>Prépa (HC)</h3><span class="label-muted">Checklist & notes</span></div>
+            <div class="notice" id="prepaSummary"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+<script>
+(() => {
+  const STORAGE_KEY = 'smed_timer_v3';
+  const SCHEMA_VERSION = 5;
+  const phasesList = ['Activité CHGT de PO','Début de PO','Fin de PO','Vide de ligne'];
+  const timedPhases = ['Début de PO','Fin de PO','Vide de ligne'];
+  function newId(){ return 'op_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+
+  function setupLogoContainer(container) {
+    if (!container) return;
+    const img = container.querySelector('.logo-image');
+    const fallback = container.querySelector('.logo-fallback-text');
+    if (!img || !fallback) return;
+
+    const showFallback = () => {
+      container.classList.add('logo-missing');
+    };
+
+    const hideFallback = () => {
+      container.classList.remove('logo-missing');
+    };
+
+    if (img.complete) {
+      if (img.naturalWidth === 0) {
+        showFallback();
+      } else {
+        hideFallback();
+      }
+    }
+
+    img.addEventListener('error', showFallback);
+    img.addEventListener('load', () => {
+      if (img.naturalWidth === 0) {
+        showFallback();
+      } else {
+        hideFallback();
+      }
+    });
+  }
+  const DEFAULT_STATE = () => ({
+    schema_version: SCHEMA_VERSION,
+    site: '',
+    line: 'L29',
+    po: '',
+    mode: 'up',
+    operators: ['Opérateur A','', '', ''],
+    defaultOperatorIndex: 0,
+    multiView: true,
+    // PATCH SMED — affichage courant only
+    _onlyCurrent: false,
+    events: [],
+    phases: {
+      'Activité CHGT de PO': [
+        { id: newId(), name: 'Checklist sécurité', targetMin: 3, operatorIndex: 0, enabled: true, details: '' }
+      ],
+      'Début de PO': [
+        { id: newId(), name: 'Arrêt ligne', targetMin: 4, operatorIndex: 0, enabled: true, details: '' },
+        { id: newId(), name: 'Changement outillage', targetMin: 6, operatorIndex: 0, enabled: true, details: '' }
+      ],
+      'Fin de PO': [
+        { id: newId(), name: 'Redémarrage', targetMin: 5, operatorIndex: 0, enabled: true, details: '' }
+      ],
+      'Vide de ligne': [
+        { id: newId(), name: 'Nettoyage final', targetMin: 4, operatorIndex: 0, enabled: true, details: '' }
+      ]
+    },
+    alertMin: 12,
+    elapsedMs: 0,
+    prepaElapsedMs: 0,
+    activePhase: 'Activité CHGT de PO',
+    marks: [],
+    sessionStart: Date.now(),
+    runningSince: null,
+    sessionElapsedMs: 0,
+    completedOpsByOp: {},
+    multiViewOverride: null
+  });
+
+  const els = {
+    pages: document.querySelectorAll('.page'),
+    navButtons: document.querySelectorAll('.nav-tabs button'),
+    display: document.getElementById('display'),
+    start: document.getElementById('start'),
+    lap: document.getElementById('lap'),
+    end: document.getElementById('end'),
+    reset: document.getElementById('reset'),
+    state: document.getElementById('state'),
+    progress: document.getElementById('progress').querySelector('.progress-value'),
+    targetMin: document.getElementById('targetMin'),
+    warnMin: document.getElementById('warnMin'),
+    mode: document.getElementById('mode'),
+    line: document.getElementById('line'),
+    po: document.getElementById('po'),
+    now: document.getElementById('now'),
+    logTable: document.getElementById('logTable'),
+    totalCell: document.getElementById('totalCell'),
+    exportCsv: document.getElementById('exportCsv'),
+    exportHtml: document.getElementById('exportHtml'),
+    fullscreen: document.getElementById('fullscreen'),
+    toggleJournal: document.getElementById('toggleJournal'),
+    brandLine: document.getElementById('brandLine'),
+    phaseChips: document.getElementById('phaseChips'),
+    opsPhaseChips: document.getElementById('opsPhaseChips'),
+    saveParams: document.getElementById('saveParams'),
+    resetParams: document.getElementById('resetParams'),
+    refreshAnalysis: document.getElementById('refreshAnalysis'),
+    logCount: document.getElementById('logCount'),
+    toastContainer: document.getElementById('toastContainer'),
+    alertInput: document.getElementById('alertInput'),
+    suggestAlert: document.getElementById('suggestAlert'),
+    defaultOperator: document.getElementById('defaultOperator'),
+    opInputs: [document.getElementById('op1'), document.getElementById('op2'), document.getElementById('op3'), document.getElementById('op4')],
+    multiView: document.getElementById('multiView'),
+    phaseTables: document.getElementById('phaseTables'),
+    kpiGrid: document.getElementById('kpiGrid'),
+    topContrib: document.getElementById('topContrib'),
+    topOps: document.getElementById('topOps'),
+    perturbateurs: document.getElementById('perturbateurs'),
+    phaseDistribution: document.getElementById('phaseDistribution'),
+    operatorDistribution: document.getElementById('operatorDistribution'),
+    phaseDistributionTarget: document.getElementById('phaseDistributionTarget'),
+    operatorDistributionTarget: document.getElementById('operatorDistributionTarget'),
+    prepaSummary: document.getElementById('prepaSummary'),
+    progressContainer: document.getElementById('progress'),
+    eventForm: document.getElementById('eventForm'),
+    eventInput: document.getElementById('eventInput'),
+    eventsList: document.getElementById('eventsList'),
+    splash: document.getElementById('splash')
+  };
+
+  let state = migrate(loadState());
+  const runtime = {
+    activePage: 'timerPage',
+    animationFrame: null,
+    lastTick: performance.now(),
+    focusedOperator: state.defaultOperatorIndex || 0,
+    journalHidden: false,
+    analysisTimeout: null,
+    shouldScrollToCurrent: false,
+    quickEventMenu: null
+  };
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return DEFAULT_STATE();
+      return JSON.parse(raw);
+    } catch (err) {
+      console.error('Erreur de chargement, réinitialisation', err);
+      return DEFAULT_STATE();
+    }
+  }
+
+  function migrate(data) {
+    const base = DEFAULT_STATE();
+    const defaultLine = base.line;
+    const merged = Object.assign(base, data || {});
+    merged.schema_version = SCHEMA_VERSION;
+    if (typeof merged.line !== 'string' || !merged.line.trim()) {
+      merged.line = defaultLine;
+    }
+    merged.phases = merged.phases || DEFAULT_STATE().phases;
+    merged.operators = Array.isArray(merged.operators) ? merged.operators : ['', '', '', ''];
+    while (merged.operators.length < 4) merged.operators.push('');
+    merged.defaultOperatorIndex = typeof merged.defaultOperatorIndex === 'number' ? merged.defaultOperatorIndex : 0;
+    if (merged.defaultOperatorIndex < 0 || merged.defaultOperatorIndex >= merged.operators.length) {
+      merged.defaultOperatorIndex = 0;
+    }
+    merged.alertMin = Number.isFinite(merged.alertMin) ? merged.alertMin : 0;
+    merged.marks = Array.isArray(merged.marks) ? merged.marks : [];
+    Object.keys(merged.phases).forEach(ph => {
+      merged.phases[ph] = (merged.phases[ph] || []).map(op => {
+        const hasEnabled = op && Object.prototype.hasOwnProperty.call(op, 'enabled');
+        const enabled = hasEnabled ? !(op.enabled === false || op.enabled === 0 || op.enabled === '0') : true;
+        return {
+          ...op,
+          id: op.id || newId(),
+          enabled,
+          details: op && typeof op.details === 'string' ? op.details : ''
+        };
+      });
+    });
+    merged.completedOpsByOp = merged.completedOpsByOp || {};
+    merged.events = Array.isArray(merged.events)
+      ? merged.events.map(label => typeof label === 'string' ? label.trim() : '').filter(label => label)
+      : [];
+    // PATCH SMED — affichage courant only
+    merged._onlyCurrent = !!merged._onlyCurrent;
+    Object.keys(merged.completedOpsByOp).forEach(op => {
+      const phases = typeof merged.completedOpsByOp[op] === 'object' && merged.completedOpsByOp[op] ? merged.completedOpsByOp[op] : {};
+      Object.keys(phases).forEach(ph => {
+        const raw = phases[ph];
+        const asSet = raw instanceof Set ? raw : new Set(Array.isArray(raw) ? raw : Object.values(raw || {}));
+        const ops = merged.phases[ph] || [];
+        const ids = new Set(ops.map(o => o.id));
+        const byName = new Map();
+        ops.forEach(o => {
+          const list = byName.get(o.name) || [];
+          list.push(o.id);
+          byName.set(o.name, list);
+        });
+        const known = new Set();
+        asSet.forEach(val => {
+          if (ids.has(val)) {
+            known.add(val);
+            return;
+          }
+          const list = byName.get(val);
+          if (list && list.length) {
+            known.add(list.shift());
+          }
+        });
+        phases[ph] = known;
+      });
+      merged.completedOpsByOp[op] = phases;
+    });
+    merged.marks = merged.marks.map(m => ({
+      t: m.t ?? 0,
+      phase: m.phase || merged.activePhase || 'Activité CHGT de PO',
+      operator: m.operator || undefined,
+      label: m.label || '',
+      kind: m.kind || 'event',
+      note: m.note || '',
+      hc: !!m.hc,
+      durationMs: m.durationMs || 0,
+      opId: m.opId || null
+    }));
+    if (!Number.isFinite(merged.elapsedMs)) merged.elapsedMs = 0;
+    if (!Number.isFinite(merged.prepaElapsedMs)) merged.prepaElapsedMs = 0;
+    if (!Number.isFinite(merged.sessionElapsedMs)) merged.sessionElapsedMs = 0;
+    if (!merged.sessionStart) merged.sessionStart = Date.now();
+    if (!merged.activePhase || !phasesList.includes(merged.activePhase)) merged.activePhase = 'Activité CHGT de PO';
+    merged.multiView = merged.multiView ?? true;
+    return merged;
+  }
+
+  function serializeState() {
+    const copy = JSON.parse(JSON.stringify(state));
+    copy.completedOpsByOp = {};
+    Object.keys(state.completedOpsByOp).forEach(op => {
+      copy.completedOpsByOp[op] = {};
+      Object.keys(state.completedOpsByOp[op]).forEach(ph => {
+        copy.completedOpsByOp[op][ph] = Array.from(state.completedOpsByOp[op][ph]);
+      });
+    });
+    return copy;
+  }
+
+  function saveState(showToastFlag = false) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeState()));
+      if (showToastFlag) showToast('Paramètres enregistrés ✓');
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function resetState() {
+    state = DEFAULT_STATE();
+    saveState();
+    refreshAll();
+    showToast('Réinitialisation effectuée');
+  }
+
+  function showToast(message, variant = 'success') {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `<span class="icon">${variant === 'success' ? '✔' : variant === 'error' ? '⚠' : 'ℹ'}</span><span>${message}</span>`;
+    els.toastContainer.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(10px)';
+    }, 20);
+    setTimeout(() => toast.remove(), 4200);
+  }
+
+  function formatDuration(ms, showMillis = false) {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const h = String(Math.floor(total / 3600)).padStart(2,'0');
+    const m = String(Math.floor((total % 3600) / 60)).padStart(2,'0');
+    const s = String(total % 60).padStart(2,'0');
+    if (!showMillis) return `${h}:${m}:${s}`;
+    const cent = String(Math.floor((ms % 1000)/10)).padStart(2,'0');
+    return `${h}:${m}:${s}.${cent}`;
+  }
+
+  function escapeHtml(value) {
+    const entities = new Map([
+      ['&', '&amp;'],
+      ['<', '&lt;'],
+      ['>', '&gt;'],
+      ['"', '&quot;'],
+      ['\'', '&#39;']
+    ]);
+    return String(value).replace(/[&<>"']/g, ch => entities.get(ch));
+  }
+
+  function formatDetailsHtml(text) {
+    if (!text || !text.trim()) {
+      return '<span class="label-muted">Aucun détail renseigné</span>';
+    }
+    return escapeHtml(text).replace(/\r?\n/g, '<br>');
+  }
+
+  function sanitizeCsvText(text) {
+    return String(text || '').replace(/\r?\n/g, ' / ').replace(/;/g, ',').trim();
+  }
+
+  function targetMinutesForPhase(phase) {
+    return (state.phases[phase] || [])
+      .filter(op => op.enabled !== false)
+      .reduce((sum, op) => sum + Number(op.targetMin || 0), 0);
+  }
+  function totalTargetMinutes() {
+    return timedPhases.reduce((sum, phase) => sum + targetMinutesForPhase(phase), 0);
+  }
+
+  function updateTargets() {
+    const target = totalTargetMinutes();
+    els.targetMin.textContent = target.toFixed(1);
+    els.warnMin.textContent = state.alertMin ? Number(state.alertMin).toFixed(1) : (target * 0.85).toFixed(1);
+  }
+
+  function ensureCompletedStructures() {
+    for (let idx = 0; idx < state.operators.length; idx++) {
+      const name = getCurrentOperatorName(idx);
+      if (!state.completedOpsByOp[name]) state.completedOpsByOp[name] = {};
+      phasesList.forEach(ph => {
+        if (!(state.completedOpsByOp[name][ph] instanceof Set)) {
+          state.completedOpsByOp[name][ph] = new Set(state.completedOpsByOp[name][ph] || []);
+        }
+      });
+    }
+  }
+
+  function getCurrentOperatorName(index) {
+    return state.operators[index] || `Opérateur ${index+1}`;
+  }
+
+  // PATCH SMED — stats opérateur/phase
+  function computeOpPhaseStats(operatorIndex, phase){
+    const operatorName = getCurrentOperatorName(operatorIndex);
+    const ops = (state.phases[phase] || []).filter(o => o.enabled !== false)
+      .filter(o => (typeof o.operatorIndex === 'number' ? o.operatorIndex : state.defaultOperatorIndex) === operatorIndex);
+
+    const total = ops.length;
+    // Cible = somme des targetMin de ses ops incluses
+    const targetMs = ops.reduce((s,o) => s + (Number(o.targetMin||0)*60000), 0);
+
+    // Réalisées (Set déjà maintenu par phase)
+    ensureCompletedStructures();
+    const doneSet = (state.completedOpsByOp[operatorName] && state.completedOpsByOp[operatorName][phase]) || new Set();
+    const done = ops.reduce((c,o)=> c + (doneSet.has(o.id||o.name) ? 1 : 0), 0);
+
+    // Temps réel attribué à cet opérateur sur la phase (hors HC)
+    let realMs = 0;
+    let prev = 0, contextPhase = state.marks.length ? state.marks[0].phase : state.activePhase;
+    state.marks.forEach(m=>{
+      const dur = m.durationMs || Math.max(0, m.t - prev);
+      const isPhaseChange = m.kind==='event' && m.label?.toLowerCase().includes('changement de phase');
+      const effectivePhase = isPhaseChange ? contextPhase : m.phase;
+      if (effectivePhase === phase && phase !== 'Activité CHGT de PO' && m.operator === operatorName){
+        if (m.kind === 'op' || m.kind === 'event') realMs += dur;
+      }
+      prev = m.t;
+      contextPhase = m.phase;
+    });
+
+    const percent = total ? Math.round((done/total)*100) : 0;
+    const ratio = targetMs ? (realMs/targetMs) : 0;
+
+    return {done,total,realMs,targetMs,percent,ratio};
+  }
+
+  function renderPhaseChips() {
+    els.phaseChips.innerHTML = '';
+    phasesList.forEach(phase => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'phase-chip' + (state.activePhase === phase ? ' active' : '');
+      btn.dataset.phase = phase;
+      btn.innerHTML = `<span class="dot"></span><span>${phase}${phase === 'Activité CHGT de PO' ? ' (HC)' : ''}</span>`;
+      btn.addEventListener('click', () => {
+        changePhase(phase);
+      });
+      els.phaseChips.appendChild(btn);
+    });
+    // PATCH SMED — mini compteur HC
+    const hcBadge = document.getElementById('hcMini');
+    if (hcBadge){
+      if (state.activePhase === 'Activité CHGT de PO'){
+        const ops = (state.phases['Activité CHGT de PO'] || []).filter(o=>o.enabled !== false);
+        const total = ops.length || 0;
+        const done = state.marks.filter(m => m.phase === 'Activité CHGT de PO' && m.kind === 'op').length;
+        hcBadge.textContent = `HC : ${done}/${total} · ${formatDuration(state.prepaElapsedMs)}`;
+        hcBadge.style.display = 'inline-block';
+      }else{
+        hcBadge.style.display = 'none';
+      }
+    }
+  }
+
+  function renderOperatorColumns() {
+    ensureCompletedStructures();
+    els.opsPhaseChips.innerHTML = '';
+    // PATCH rm-toggle: logique "seulement la courante" retirée
+    if (!Number.isInteger(runtime.focusedOperator)) runtime.focusedOperator = state.defaultOperatorIndex;
+    if (runtime.focusedOperator < 0 || runtime.focusedOperator >= state.operators.length) runtime.focusedOperator = state.defaultOperatorIndex;
+    if (!state.multiView) runtime.focusedOperator = state.defaultOperatorIndex;
+    if (!state.operators[runtime.focusedOperator] && runtime.focusedOperator !== state.defaultOperatorIndex) {
+      runtime.focusedOperator = state.defaultOperatorIndex;
+    }
+    state.operators.forEach((op, idx) => {
+      if (!state.multiView && idx !== state.defaultOperatorIndex) return;
+      if (!op && idx !== state.defaultOperatorIndex) return;
+
+      const operatorName = getCurrentOperatorName(idx);
+
+      // PATCH SMED — stats en-tête opérateur
+      const stats = computeOpPhaseStats(idx, state.activePhase);
+      const ratio = stats.targetMs ? (stats.realMs / stats.targetMs) : 0;
+      let timeClass = 'time-ok';
+      if (ratio > 1) timeClass = 'time-bad';
+      else if (ratio > 0.85) timeClass = 'time-warn';
+
+      const col = document.createElement('div');
+      col.className = 'op-col';
+      col.dataset.index = idx;
+
+      const badge = document.createElement('button');
+      badge.type = 'button';
+      badge.className = 'operator-badge' + (idx === runtime.focusedOperator ? ' focused' : '');
+      badge.textContent = operatorName;
+      badge.addEventListener('click', () => { runtime.focusedOperator = idx; renderOperatorColumns(); });
+      col.appendChild(badge);
+
+      // PATCH op-event — pastille sous le nom
+      const evtBtn = document.createElement('button');
+      evtBtn.type = 'button';
+      evtBtn.className = 'op-evt-btn';
+      evtBtn.textContent = "Évènement HC";
+      evtBtn.addEventListener('click', (e)=> {
+        e.stopPropagation();
+        openOperatorEventMenu(idx, evtBtn);
+      });
+      col.appendChild(evtBtn);
+
+      const card = document.createElement('div');
+      card.className = 'operator-card' + (idx === runtime.focusedOperator ? ' focused' : '');
+      card.dataset.index = idx;
+
+      card.addEventListener('click', e => {
+        if (e.target.closest('.op-pill')) return;
+        runtime.focusedOperator = idx;
+        renderOperatorColumns();
+      });
+
+      const phaseOps = (state.phases[state.activePhase] || []).filter(operation => {
+        if (operation.enabled === false) return false;
+        const assignedIndex = typeof operation.operatorIndex === 'number' ? operation.operatorIndex : state.defaultOperatorIndex;
+        return assignedIndex === idx;
+      });
+
+      const completedSetForPhase = state.completedOpsByOp[operatorName][state.activePhase];
+
+      card.innerHTML = `<div class="operator-header">
+          <h3>${escapeHtml(operatorName)}</h3>
+          <span class="progress-text">${stats.percent}%</span>
+          <div class="meta-line" style="grid-column:1/-1;">
+            <span class="label-muted">${stats.percent}%</span>
+            <span class="time badge ${timeClass}">
+              ${formatDuration(stats.realMs)} / ${formatDuration(stats.targetMs)}
+            </span>
+          </div>
+          <div class="meter" style="grid-column:1/-1;">
+            <div class="fill" style="width:${Math.min(100, Math.round((stats.realMs/(stats.targetMs||1))*100))}%;"></div>
+          </div>
+        </div>`;
+
+      const doneOps = [];
+      const todoOps = [];
+
+      phaseOps.forEach((operation, opIndex) => {
+        if (!operation.id) operation.id = newId();
+        const isDone = completedSetForPhase.has(operation.id || operation.name);
+        const target = isDone ? doneOps : todoOps;
+        target.push({ operation, opIndex, isDone });
+      });
+
+      const buildPill = (operation, opIndex, isDone) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'op-item';
+
+        const head = document.createElement('div');
+        head.className = 'op-item-head';
+
+        const pill = document.createElement('button');
+        pill.type = 'button';
+        pill.className = 'op-pill';
+        if (isDone) pill.classList.add('done');
+        const indexSpan = document.createElement('span');
+        indexSpan.className = 'index';
+        indexSpan.textContent = opIndex + 1;
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = operation.name || '';
+        const checkSpan = document.createElement('span');
+        checkSpan.className = 'check';
+        checkSpan.textContent = '✔';
+        const actionsWrap = document.createElement('div');
+        actionsWrap.className = 'pill-actions';
+        const noteBtn = document.createElement('button');
+        noteBtn.type = 'button';
+        noteBtn.className = 'note-btn';
+        noteBtn.setAttribute('aria-label', `Note pour ${operation.name || 'opération'}`);
+        noteBtn.title = 'Ajouter une note';
+        noteBtn.textContent = 'Note';
+        if (operationHasNote(operation.id)) {
+          noteBtn.classList.add('has-note');
+        }
+        noteBtn.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          handleOperationNote(idx, operation);
+        });
+        actionsWrap.appendChild(noteBtn);
+        pill.appendChild(indexSpan);
+        pill.appendChild(nameSpan);
+        pill.appendChild(checkSpan);
+        pill.appendChild(actionsWrap);
+        pill.addEventListener('click', () => validateOperation(idx, operation));
+
+        const hasDetails = !!(operation.details && operation.details.trim());
+
+        const detailPanel = document.createElement('div');
+        detailPanel.className = 'op-details';
+        const detailsId = `${operation.id}-details`;
+        detailPanel.id = detailsId;
+        detailPanel.innerHTML = formatDetailsHtml(operation.details || '');
+        detailPanel.hidden = true;
+        if (hasDetails) {
+          const detailsBtn = document.createElement('button');
+          detailsBtn.type = 'button';
+          detailsBtn.className = 'pill-action pill-action--ghost';
+          detailsBtn.textContent = 'Détails';
+          detailsBtn.title = 'Afficher les détails';
+          detailsBtn.setAttribute('aria-expanded', 'false');
+          detailsBtn.setAttribute('aria-controls', detailsId);
+          detailsBtn.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            const willOpen = detailPanel.hidden;
+            detailPanel.hidden = !willOpen;
+            detailPanel.classList.toggle('open', willOpen);
+            detailsBtn.setAttribute('aria-expanded', String(willOpen));
+          });
+          actionsWrap.appendChild(detailsBtn);
+        }
+
+        head.appendChild(pill);
+        wrapper.appendChild(head);
+        wrapper.appendChild(detailPanel);
+
+        return { wrapper, pill };
+      };
+
+      if (doneOps.length) {
+        const doneDetails = document.createElement('details');
+        doneDetails.className = 'done-group';
+        const summary = document.createElement('summary');
+        summary.innerHTML = 'Réalisées <span class="count">(' + doneOps.length + ')</span>';
+        const doneList = document.createElement('div');
+        doneList.className = 'done-list';
+        doneOps.forEach(({ operation, opIndex }) => {
+          const { wrapper } = buildPill(operation, opIndex, true);
+          doneList.appendChild(wrapper);
+        });
+        doneDetails.append(summary, doneList);
+        card.appendChild(doneDetails);
+      }
+
+      const list = document.createElement('div');
+      list.className = 'op-list';
+      let firstPending = true;
+
+      todoOps.forEach(({ operation, opIndex }) => {
+        const { wrapper, pill } = buildPill(operation, opIndex, false);
+        if (firstPending) {
+          pill.classList.add('current');
+          firstPending = false;
+        }
+        list.appendChild(wrapper);
+      });
+
+      if (!phaseOps.length) {
+        const empty = document.createElement('div');
+        empty.className = 'label-muted';
+        empty.textContent = 'Aucune opération';
+        list.appendChild(empty);
+      }
+
+      card.appendChild(list);
+      col.appendChild(card);
+      els.opsPhaseChips.appendChild(col);
+    });
+    if (runtime.shouldScrollToCurrent) {
+      runtime.shouldScrollToCurrent = false;
+      requestAnimationFrame(scrollCurrentOperationIntoView);
+    }
+  }
+
+  function scrollCurrentOperationIntoView() {
+    if (!els.opsPhaseChips) return;
+    const selector = `.operator-card[data-index="${runtime.focusedOperator}"] .op-pill.current`;
+    const target = els.opsPhaseChips.querySelector(selector) || els.opsPhaseChips.querySelector('.op-pill.current');
+    if (target) {
+      target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+
+  function operationHasNote(opId) {
+    if (!opId) return false;
+    return state.marks.some(mark => (mark.kind === 'note' || mark.kind === 'op') && mark.opId === opId && mark.note && mark.note.trim());
+  }
+
+  function handleOperationNote(operatorIndex, operation) {
+    if (!operation.id) operation.id = newId();
+    const operatorName = getCurrentOperatorName(operatorIndex);
+    const existingOpMark = state.marks.find(mark => mark.kind === 'op' && mark.opId === operation.id);
+    const existingNoteIndex = state.marks.findIndex(mark => mark.kind === 'note' && mark.opId === operation.id);
+    const currentText = existingNoteIndex >= 0
+      ? state.marks[existingNoteIndex].note
+      : existingOpMark?.note || '';
+    const input = prompt(`Note pour ${operation.name}`, currentText || '');
+    if (input === null) return;
+    const trimmed = input.trim();
+    if (!trimmed) {
+      if (existingNoteIndex >= 0) {
+        state.marks.splice(existingNoteIndex, 1);
+      }
+      if (existingOpMark) existingOpMark.note = '';
+      saveState();
+      renderLog();
+      renderOperatorColumns();
+      updateAnalysisDelayed();
+      return;
+    }
+    const timestamp = getSessionElapsed();
+    if (existingNoteIndex >= 0) {
+      const mark = state.marks[existingNoteIndex];
+      mark.note = trimmed;
+      mark.label = operation.name;
+      mark.phase = state.activePhase;
+      mark.operator = operatorName;
+      mark.t = timestamp;
+      mark.hc = state.activePhase === 'Activité CHGT de PO';
+    } else {
+      state.marks.push({
+        t: timestamp,
+        phase: state.activePhase,
+        operator: operatorName,
+        label: operation.name,
+        kind: 'note',
+        note: trimmed,
+        hc: state.activePhase === 'Activité CHGT de PO',
+        durationMs: 0,
+        opId: operation.id
+      });
+    }
+    if (existingOpMark) {
+      existingOpMark.note = trimmed;
+    }
+    saveState();
+    renderLog();
+    renderOperatorColumns();
+    updateAnalysisDelayed();
+  }
+
+  function validateOperation(operatorIndex, operation) {
+    runtime.focusedOperator = operatorIndex;
+    const operatorName = getCurrentOperatorName(operatorIndex);
+    ensureCompletedStructures();
+    const completedSet = state.completedOpsByOp[operatorName][state.activePhase];
+    if (!operation.id) operation.id = newId();
+    if (completedSet.has(operation.id)) return;
+    const previousTime = state.marks.length ? state.marks[state.marks.length-1].t : 0;
+    const nowElapsed = getSessionElapsed();
+    const duration = Math.max(0, nowElapsed - previousTime);
+    if (completedSet.has(operation.name)) completedSet.delete(operation.name);
+    completedSet.add(operation.id);
+    state.marks.push({
+      t: nowElapsed,
+      phase: state.activePhase,
+      operator: operatorName,
+      label: operation.name,
+      opId: operation.id,
+      kind: 'op',
+      note: '',
+      hc: state.activePhase === 'Activité CHGT de PO',
+      durationMs: duration
+    });
+    saveState();
+    runtime.shouldScrollToCurrent = true;
+    renderOperatorColumns();
+    renderLog();
+    updateAnalysisDelayed();
+  }
+
+  function changePhase(phase) {
+    if (!phasesList.includes(phase)) return;
+    if (state.activePhase === phase) return;
+    const previousPhase = state.activePhase;
+    if (state.runningSince) {
+      const now = Date.now();
+      const delta = now - state.runningSince;
+      state.sessionElapsedMs += delta;
+      if (previousPhase === 'Activité CHGT de PO') {
+        state.prepaElapsedMs += delta;
+      } else {
+        state.elapsedMs += delta;
+      }
+      state.runningSince = now;
+    }
+    state.activePhase = phase;
+    const hasStarted = state.marks.some(m => m.kind === 'start');
+    if (els.start) {
+      if (phase === 'Activité CHGT de PO') {
+        els.start.disabled = true;
+        els.start.classList.remove('primary');
+        els.start.classList.add('secondary');
+        els.start.innerHTML = '<span class="icon">▶</span>Démarrer';
+        els.state.textContent = 'Phase hors chrono';
+      } else {
+        els.start.classList.add('primary');
+        els.start.classList.remove('secondary');
+        if (hasStarted) {
+          els.start.disabled = true;
+          els.start.innerHTML = 'En cours';
+        } else {
+          els.start.disabled = false;
+          els.start.innerHTML = '<span class="icon">▶</span>Démarrer';
+        }
+      }
+    }
+    state.marks.push({
+      t: getSessionElapsed(),
+      phase,
+      label: `Changement de phase vers ${phase}`,
+      kind: 'event',
+      hc: phase === 'Activité CHGT de PO'
+    });
+    renderPhaseChips();
+    renderOperatorColumns();
+    renderLog();
+    updateDisplay();
+    saveState();
+    updateAnalysisDelayed();
+  }
+
+  function getSessionElapsed() {
+    return state.sessionElapsedMs + (state.runningSince ? Date.now() - state.runningSince : 0);
+  }
+
+  function startTimer() {
+    if (state.activePhase === 'Activité CHGT de PO') {
+      showToast('Phase hors chrono : démarrage indisponible', 'info');
+      return;
+    }
+    if (state.runningSince) return;
+    const alreadyStarted = state.marks.some(mark => mark.kind === 'start');
+    if (alreadyStarted) return;
+    state.sessionStart = Date.now();
+    state.runningSince = Date.now();
+    runtime.lastTick = performance.now();
+    state.marks.push({
+      t: getSessionElapsed(),
+      phase: state.activePhase,
+      label: 'Chrono démarré',
+      kind: 'start',
+      note: '',
+      hc: false,
+      durationMs: 0,
+      operator: ''
+    });
+    if (els.start) {
+      els.start.disabled = true;
+      els.start.classList.add('primary');
+      els.start.classList.remove('secondary');
+      els.start.innerHTML = 'En cours';
+    }
+    requestTick();
+    saveState();
+    renderLog();
+    updateDisplay();
+    showToast('Chrono démarré');
+  }
+
+  function requestTick() {
+    cancelAnimationFrame(runtime.animationFrame);
+    if (state.runningSince) {
+      runtime.animationFrame = requestAnimationFrame(tick);
+    }
+  }
+
+  function tick(now) {
+    runtime.lastTick = now;
+    if (state.runningSince) {
+      updateDisplay();
+      runtime.animationFrame = requestAnimationFrame(tick);
+    }
+  }
+
+  function updateDisplay() {
+    const targetMs = totalTargetMinutes()*60000;
+    const currentElapsed = computeElapsedMs();
+    const base = state.mode === 'down' ? Math.max(0, targetMs - currentElapsed) : currentElapsed;
+    els.display.textContent = formatDuration(base);
+    const warnMs = Number(state.alertMin || (totalTargetMinutes()*0.85))*60000;
+    const pct = targetMs ? Math.min(100, (currentElapsed/targetMs)*100) : 0;
+    els.progress.style.width = `${Math.min(100, pct)}%`;
+    els.progress.style.background = currentElapsed <= warnMs ? 'var(--accent)' : currentElapsed <= targetMs ? 'var(--warn)' : 'var(--danger)';
+    if (state.activePhase === 'Activité CHGT de PO') {
+      els.state.textContent = 'Phase hors chrono';
+    } else {
+      if (state.runningSince) {
+        els.state.textContent = 'En cours';
+      } else if (state.marks.some(m => m.kind === 'end')) {
+        els.state.textContent = 'Terminé';
+      } else {
+        els.state.textContent = 'Prêt';
+      }
+    }
+    els.targetMin.textContent = totalTargetMinutes().toFixed(1);
+    els.warnMin.textContent = Number(state.alertMin || (totalTargetMinutes()*0.85)).toFixed(1);
+  }
+
+  function computeElapsedMs() {
+    if (state.runningSince && state.activePhase !== 'Activité CHGT de PO') {
+      return state.elapsedMs + (Date.now() - state.runningSince);
+    }
+    return state.elapsedMs;
+  }
+
+  function addEvent(label, options = {}) {
+    state.marks.push({
+      t: getSessionElapsed(),
+      phase: state.activePhase,
+      operator: options.operator,
+      label,
+      kind: options.kind || 'event',
+      note: options.note || '',
+      hc: state.activePhase === 'Activité CHGT de PO',
+      durationMs: 0
+    });
+    saveState();
+    renderLog();
+    updateAnalysisDelayed();
+  }
+
+  function openQuickEventMenu() {
+    if (runtime.quickEventMenu) {
+      closeQuickEventMenu();
+      return;
+    }
+    const available = state.events.filter(label => label && label.trim());
+    if (!available.length) {
+      const manual = prompt("Libellé de l'événement :");
+      if (manual && manual.trim()) addEvent(manual.trim());
+      return;
+    }
+    const menu = document.createElement('div');
+    menu.className = 'quick-event-menu';
+    menu.setAttribute('role', 'menu');
+    available.forEach(label => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = label;
+      btn.addEventListener('click', () => {
+        addEvent(label);
+        closeQuickEventMenu();
+      });
+      menu.appendChild(btn);
+    });
+    const custom = document.createElement('button');
+    custom.type = 'button';
+    custom.textContent = 'Autre…';
+    custom.addEventListener('click', () => {
+      const manual = prompt("Libellé de l'événement :");
+      if (manual && manual.trim()) addEvent(manual.trim());
+      closeQuickEventMenu();
+    });
+    menu.appendChild(custom);
+    document.body.appendChild(menu);
+    const rect = els.lap.getBoundingClientRect();
+    menu.style.top = `${rect.bottom + window.scrollY + 8}px`;
+    menu.style.left = `${rect.left + window.scrollX}px`;
+    runtime.quickEventMenu = menu;
+    document.addEventListener('click', handleQuickEventOutside, true);
+    document.addEventListener('keydown', handleQuickEventKeydown);
+    if (els.lap) els.lap.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeQuickEventMenu() {
+    if (!runtime.quickEventMenu) return;
+    runtime.quickEventMenu.remove();
+    runtime.quickEventMenu = null;
+    document.removeEventListener('click', handleQuickEventOutside, true);
+    document.removeEventListener('keydown', handleQuickEventKeydown);
+    if (els.lap) els.lap.setAttribute('aria-expanded', 'false');
+  }
+
+  function handleQuickEventOutside(event) {
+    if (!runtime.quickEventMenu) return;
+    if (runtime.quickEventMenu.contains(event.target) || (els.lap && els.lap.contains(event.target))) return;
+    closeQuickEventMenu();
+  }
+
+  function handleQuickEventKeydown(event) {
+    if (event.key === 'Escape') {
+      closeQuickEventMenu();
+    }
+  }
+
+  // PATCH op-event — ouvre le menu d'événements pour 1 opérateur
+  function openOperatorEventMenu(operatorIndex, anchorEl){
+    closeQuickEventMenu();
+    const available = state.events.filter(l => l && l.trim());
+    const menu = document.createElement('div');
+    menu.className = 'quick-event-menu';
+    menu.setAttribute('role','menu');
+
+    const add = (label) => {
+      addOperatorHCEvent(operatorIndex, label);
+      closeQuickEventMenu();
+    };
+
+    if (available.length){
+      available.forEach(label=>{
+        const b = document.createElement('button');
+        b.type='button'; b.textContent=label; b.addEventListener('click', ()=>add(label));
+        menu.appendChild(b);
+      });
+    }
+    const custom = document.createElement('button');
+    custom.type='button'; custom.textContent='Autre…';
+    custom.addEventListener('click', ()=>{
+      const manual = prompt("Libellé de l'événement HC :");
+      if (manual && manual.trim()) add(manual.trim());
+    });
+    menu.appendChild(custom);
+
+    document.body.appendChild(menu);
+    const r = anchorEl.getBoundingClientRect();
+    menu.style.top = `${r.bottom + window.scrollY + 8}px`;
+    menu.style.left = `${r.left + window.scrollX}px`;
+    runtime.quickEventMenu = menu;
+    document.addEventListener('click', handleQuickEventOutside, true);
+    document.addEventListener('keydown', handleQuickEventKeydown);
+  }
+
+  // PATCH op-event — enregistre l'événement HC pour l'opérateur
+  function addOperatorHCEvent(operatorIndex, label){
+    const operatorName = getCurrentOperatorName(operatorIndex);
+    state.marks.push({
+      t: getSessionElapsed(),
+      phase: 'Activité CHGT de PO',
+      operator: operatorName,
+      label: label,
+      kind: 'event',
+      note: '',
+      hc: true,
+      durationMs: 0
+    });
+    saveState();
+    renderLog();
+    renderOperatorColumns();
+    updateAnalysisDelayed();
+    showToast(`Événement HC ajouté pour ${operatorName}`);
+  }
+
+  async function finishChange() {
+    if (state.marks.some(m => m.kind === 'end')) return;
+    if (state.runningSince) {
+      const now = Date.now();
+      const delta = now - state.runningSince;
+      state.sessionElapsedMs += delta;
+      if (state.activePhase === 'Activité CHGT de PO') {
+        state.prepaElapsedMs += delta;
+      } else {
+        state.elapsedMs += delta;
+      }
+      state.runningSince = null;
+    }
+    addEvent('Fin du changement', { kind: 'end' });
+    cancelAnimationFrame(runtime.animationFrame);
+    updateDisplay();
+    showToast('Changement terminé');
+    const poSafe = (state.po && state.po.trim() ? state.po.trim() : 'PO').replace(/[^\w-]+/g, '_') || 'PO';
+    const lineSafe = (state.line && state.line.trim() ? state.line.trim() : 'L29').replace(/[^\w-]+/g, '_') || 'L29';
+    const stamp = new Date().toISOString().slice(0, 16).replace(/:/g, '-');
+    const filename = `SMED_${lineSafe}_${poSafe}_${stamp}.html`;
+    await exportHtml({ filename, forceSave: true });
+  }
+
+  function renderLog() {
+    els.logTable.innerHTML = '';
+    let previousTime = 0;
+    let totalChrono = 0;
+    state.marks.sort((a,b) => a.t - b.t);
+    state.marks.forEach((mark, index) => {
+      const row = document.createElement('tr');
+      const duration = mark.durationMs || Math.max(0, mark.t - previousTime);
+      if (!mark.hc && mark.kind !== 'start') {
+        totalChrono += duration;
+      }
+      row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${formatDuration(mark.t)}</td>
+        <td>${formatDuration(duration)}</td>
+        <td>${mark.hc ? '<span class="badge hc">HC</span>' : 'Non'}</td>
+        <td>${escapeHtml(mark.phase)}</td>
+        <td>${escapeHtml(mark.operator || '')}</td>
+        <td>${escapeHtml(mark.label)}</td>
+        <td class="note-cell" contenteditable="true" data-index="${index}">${escapeHtml(mark.note || '')}</td>
+      `;
+      els.logTable.appendChild(row);
+      previousTime = mark.t;
+    });
+    els.totalCell.textContent = formatDuration(totalChrono);
+    els.logCount.textContent = `${state.marks.length} entrées`;
+  }
+
+  function handleNoteEdit(event) {
+    const cell = event.target;
+    if (!cell.matches('[contenteditable="true"]')) return;
+    const index = Number(cell.dataset.index);
+    if (!Number.isFinite(index)) return;
+    state.marks[index].note = cell.textContent.trim();
+    saveState();
+    renderOperatorColumns();
+    updateAnalysisDelayed();
+  }
+
+  function exportCsv() {
+    const target = totalTargetMinutes();
+    const headers = ['date_session','line','po','mode','hors_chrono','target_min_global','idx','horodatage','duree_ms','duree_hms','operateur','phase','evenement','note'];
+    const rows = state.marks.map((mark, idx) => [
+      new Date(state.sessionStart).toISOString(),
+      state.line,
+      state.po,
+      state.mode,
+      mark.hc ? 'true' : 'false',
+      target.toFixed(1),
+      idx + 1,
+      formatDuration(mark.t),
+      Math.max(0, mark.durationMs || 0),
+      formatDuration(mark.durationMs || 0),
+      mark.operator || '',
+      mark.phase,
+      mark.label,
+      mark.note || ''
+    ]);
+    const csv = [headers.join(';')].concat(rows.map(r => r.map(value => `"${String(value).replace(/"/g,'""')}"`).join(';'))).join('\n');
+    const rawLine = state.line && state.line.trim() ? state.line.trim() : 'L29';
+    const lineSegment = rawLine.replace(/[^\w-]+/g, '_') || 'L29';
+    const stamp = new Date().toISOString().slice(0,16).replace(/:/g, '-');
+    downloadFile(`smed_${lineSegment}_${stamp}.csv`, `\uFEFF${csv}`, 'text/csv;charset=utf-8');
+  }
+
+  async function exportHtml(options = {}) {
+    const rawLineLabel = state.line && state.line.trim() ? state.line.trim() : 'L29';
+    const reportLine = escapeHtml(rawLineLabel);
+    const lineSegment = rawLineLabel.replace(/[^\w-]+/g, '_') || 'L29';
+    const template = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Rapport SMED ${reportLine}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{color-scheme:light;}
+body{font-family:"Inter","Segoe UI",sans-serif;margin:40px;background:#f4f6fb;color:#0f1a34;}
+.report-header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:2px solid #d6def0;padding-bottom:16px;margin-bottom:32px;}
+.report-header h1{margin:0;font-size:26px;color:#0b1533;}
+.report-header .meta{margin:4px 0 0;color:#5b6380;font-size:14px;}
+.report-header .chip{background:#0b1533;color:#fff;padding:10px 18px;border-radius:999px;font-weight:600;}
+.section{margin-bottom:32px;}
+.section h2{margin:0 0 12px;font-size:20px;color:#0b1533;}
+.kpi-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}
+.kpi-card{background:#fff;border-radius:16px;padding:18px;border:1px solid #dbe3f6;box-shadow:0 10px 25px rgba(15,26,52,.08);}
+.kpi-card span{font-size:12px;letter-spacing:0.08em;color:#6c7693;text-transform:uppercase;}
+.kpi-card strong{display:block;margin-top:8px;font-size:20px;color:#0f1a34;}
+.data-table{width:100%;border-collapse:collapse;margin-top:12px;}
+.data-table th,.data-table td{border:1px solid #dbe3f6;padding:10px 12px;font-size:13px;text-align:left;}
+.data-table th{background:#eef2fc;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#4c5675;}
+.list-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+.list-grid article{background:#fff;border:1px solid #dbe3f6;border-radius:14px;padding:16px;display:grid;gap:10px;}
+.list-grid h3{margin:0;font-size:15px;color:#0b1533;}
+.list-grid ul{margin:0;padding-left:20px;display:grid;gap:6px;}
+.list-grid li{color:#0f1a34;font-size:14px;}
+.prepa-card{background:#fff;border:1px solid #dbe3f6;border-radius:16px;padding:18px;display:grid;gap:10px;}
+.badge{display:inline-block;padding:4px 10px;border-radius:999px;background:#eef2fc;color:#3a4a7a;font-size:12px;}
+.badge.hc{background:#ffe8cc;color:#ad5a00;}
+.muted{color:#6c7693;font-style:italic;}
+.journal-table{width:100%;border-collapse:collapse;margin-top:16px;}
+.journal-table th,.journal-table td{border:1px solid #dbe3f6;padding:8px 10px;font-size:12px;text-align:left;}
+.journal-table th{background:#eef2fc;letter-spacing:0.06em;text-transform:uppercase;color:#4c5675;}
+.journal-table td .badge{font-size:11px;}
+@media print{body{margin:20mm;background:#fff;color:#000;} .report-header{border-color:#c5cee4;} .kpi-card,.prepa-card,.list-grid article{box-shadow:none;} a{color:inherit;}}
+</style>
+</head>
+<body>
+${buildReportHtml()}
+</body>
+</html>`;
+    const filename = options.filename || `smed_${lineSegment}_${Date.now()}.html`;
+    if (options.forceSave && typeof window !== 'undefined' && window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: filename,
+          types: [{ description: 'Document HTML', accept: { 'text/html': ['.html'] } }]
+        });
+        const writable = await handle.createWritable();
+        await writable.write(template);
+        await writable.close();
+        showToast('Rapport exporté');
+        return;
+      } catch (err) {
+        console.error('Export HTML annulé ou impossible', err);
+      }
+    }
+    downloadFile(filename, template, 'text/html');
+    if (options.forceSave) {
+      showToast('Rapport exporté');
+    }
+  }
+
+  function downloadFile(filename, content, mime) {
+    const blob = new Blob([content], { type: mime });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    requestAnimationFrame(() => {
+      URL.revokeObjectURL(link.href);
+      document.body.removeChild(link);
+    });
+  }
+
+  function buildReportHtml() {
+    const analysis = computeAnalysis();
+    const kpi = analysis.kpi;
+    const sessionDate = new Date(state.sessionStart).toLocaleString('fr-FR', { hour12: false });
+    const safePo = escapeHtml(state.po || '—');
+    const safeLine = escapeHtml(state.line || 'Ligne');
+    const modeLabel = state.mode === 'down' ? 'Chrono décroissant' : 'Chrono croissant';
+    const targetMinutes = kpi.target ? (kpi.target / 60000).toFixed(1) : '0.0';
+    const phasesRows = analysis.phases.length
+      ? analysis.phases.map(item => `<tr><td>${escapeHtml(item.phase)}</td><td>${formatDuration(item.duration)}</td><td>${item.percent}%</td><td>${item.gap ? '+' + formatDuration(item.gap) : '—'}</td></tr>`).join('')
+      : '<tr><td colspan="4" class="muted">Aucune phase chronométrée enregistrée</td></tr>';
+    const operatorRows = analysis.operators.length
+      ? analysis.operators.map(item => `<tr><td>${escapeHtml(item.operator)}</td><td>${formatDuration(item.duration)}</td><td>${item.percent}%</td></tr>`).join('')
+      : '<tr><td colspan="3" class="muted">Aucun opérateur chronométré</td></tr>';
+    const topContribList = analysis.topContrib.length
+      ? analysis.topContrib.map(item => `<li>${escapeHtml(item.phase)} · +${formatDuration(item.gap)}</li>`).join('')
+      : '<li class="muted">Aucun dépassement</li>';
+    const topOpsList = analysis.topOps.length
+      ? analysis.topOps.map(item => `<li>${escapeHtml(item.label)} (${escapeHtml(item.phase)}) – ${formatDuration(item.duration)}</li>`).join('')
+      : '<li class="muted">—</li>';
+    const perturbList = analysis.events.length
+      ? analysis.events.map(item => `<li>${escapeHtml(item.label)} (${item.count})</li>`).join('')
+      : '<li class="muted">Aucun événement récurrent</li>';
+    const prepaNotes = analysis.prepa.notes.length
+      ? `<ul>${analysis.prepa.notes.map(note => `<li>${escapeHtml(note)}</li>`).join('')}</ul>`
+      : '<p class="muted">Aucun commentaire</p>';
+    const journalRows = state.marks.length
+      ? state.marks.map((mark, idx) => `<tr><td>${idx + 1}</td><td>${formatDuration(mark.t)}</td><td>${formatDuration(mark.durationMs || 0)}</td><td>${mark.hc ? '<span class="badge hc">HC</span>' : 'Non'}</td><td>${escapeHtml(mark.phase)}</td><td>${escapeHtml(mark.operator || '')}</td><td>${escapeHtml(mark.label)}</td><td>${escapeHtml(mark.note || '')}</td></tr>`).join('')
+      : '<tr><td colspan="8" class="muted">Journal vide</td></tr>';
+    return `
+      <header class="report-header">
+        <div>
+          <h1>Rapport SMED – PO ${safePo}</h1>
+          <p class="meta">Ligne ${safeLine} · ${modeLabel} · Session du ${sessionDate}</p>
+        </div>
+        <div class="chip">Cible globale : ${targetMinutes} min</div>
+      </header>
+      <section class="section">
+        <h2>Indicateurs clés</h2>
+        <div class="kpi-grid">
+          <div class="kpi-card"><span>Durée totale</span><strong>${formatDuration(kpi.total)}</strong></div>
+          <div class="kpi-card"><span>Cible (min)</span><strong>${targetMinutes}</strong></div>
+          <div class="kpi-card"><span>Écart</span><strong>${formatDuration(kpi.gap)}</strong></div>
+          <div class="kpi-card"><span>Gain potentiel</span><strong>${formatDuration(kpi.potential)}</strong></div>
+        </div>
+      </section>
+      <section class="section">
+        <h2>Répartition par phases</h2>
+        <table class="data-table"><thead><tr><th>Phase</th><th>Durée</th><th>%</th><th>Écart vs cible</th></tr></thead><tbody>${phasesRows}</tbody></table>
+      </section>
+      <section class="section">
+        <h2>Répartition par opérateurs</h2>
+        <table class="data-table"><thead><tr><th>Opérateur</th><th>Durée</th><th>%</th></tr></thead><tbody>${operatorRows}</tbody></table>
+      </section>
+      <section class="section">
+        <h2>Analyse qualitative</h2>
+        <div class="list-grid">
+          <article><h3>Top contributeurs à l'écart</h3><ul>${topContribList}</ul></article>
+          <article><h3>Top opérations longues</h3><ul>${topOpsList}</ul></article>
+          <article><h3>Perturbateurs fréquents</h3><ul>${perturbList}</ul></article>
+        </div>
+      </section>
+      <section class="section">
+        <h2>Prépa (HC)</h2>
+        <div class="prepa-card">
+          <div><span class="badge hc">HC</span> Checklist complétée à <strong>${analysis.prepa.percent}%</strong></div>
+          <div>Temps total hors chrono : <strong>${formatDuration(analysis.prepa.duration)}</strong></div>
+          <div>Commentaires :</div>
+          ${prepaNotes}
+        </div>
+      </section>
+      <section class="section">
+        <h2>Journal des événements</h2>
+        <table class="journal-table"><thead><tr><th>#</th><th>Horodatage</th><th>Durée</th><th>HC</th><th>Phase</th><th>Opérateur</th><th>Libellé</th><th>Note</th></tr></thead><tbody>${journalRows}</tbody></table>
+      </section>
+    `;
+  }
+
+  function computeAnalysis() {
+    const phaseDurations = new Map();
+    const operatorDurations = new Map();
+    const events = new Map();
+    let previousTime = 0;
+    let totalChrono = 0;
+    const gapSource = [];
+    let phaseContext = state.marks.length ? state.marks[0].phase : state.activePhase;
+    state.marks.forEach(mark => {
+      const duration = mark.durationMs || Math.max(0, mark.t - previousTime);
+      const isPhaseChange = mark.kind === 'event' && mark.label?.toLowerCase().includes('changement de phase');
+      const attributedPhase = isPhaseChange ? phaseContext : mark.phase;
+      const attributedHc = attributedPhase === 'Activité CHGT de PO';
+      if (!attributedHc) {
+        totalChrono += duration;
+        phaseDurations.set(attributedPhase, (phaseDurations.get(attributedPhase) || 0) + duration);
+        if (mark.operator) {
+          operatorDurations.set(mark.operator, (operatorDurations.get(mark.operator) || 0) + duration);
+        }
+        if (mark.kind === 'op') {
+          gapSource.push({ phase: attributedPhase, label: mark.label, duration });
+        }
+      }
+      if (mark.kind === 'event' && mark.label && !isPhaseChange) {
+        events.set(mark.label, (events.get(mark.label) || 0) + 1);
+      }
+      previousTime = mark.t;
+      phaseContext = mark.phase;
+    });
+    const targetMs = totalTargetMinutes() * 60000;
+    const gapMs = Math.max(0, totalChrono - targetMs);
+    const potential = gapMs > 0 ? gapMs : Math.max(0, targetMs - totalChrono);
+    const phases = Array.from(phaseDurations.entries()).filter(([phase]) => timedPhases.includes(phase)).map(([phase, duration]) => ({
+      phase,
+      duration,
+      percent: totalChrono ? Math.round((duration/totalChrono)*100) : 0,
+      gap: Math.max(0, duration - targetMinutesForPhase(phase)*60000)
+    })).sort((a,b) => b.duration - a.duration);
+    const operators = Array.from(operatorDurations.entries()).map(([operator,duration]) => ({
+      operator,
+      duration,
+      percent: totalChrono ? Math.round((duration/totalChrono)*100) : 0
+    })).sort((a,b) => b.duration - a.duration);
+    const topContrib = phases.filter(p => p.gap > 0).sort((a,b) => b.gap - a.gap).slice(0,3);
+    const topOps = gapSource.filter(item => timedPhases.includes(item.phase)).sort((a,b) => b.duration - a.duration).slice(0,3);
+    const eventsList = Array.from(events.entries()).map(([label,count]) => ({ label, count })).sort((a,b) => b.count - a.count);
+    const prepaMarks = state.marks.filter(m => m.phase === 'Activité CHGT de PO');
+    const prepaCompleted = prepaMarks.filter(m => m.kind === 'op').length;
+    const prepaOps = (state.phases['Activité CHGT de PO'] || []).filter(op => op.enabled !== false);
+    const prepaTotal = prepaOps.length || 1;
+    const prepaNotes = [];
+    prepaMarks.forEach(mark => {
+      if (mark.note && mark.note.trim() && !prepaNotes.includes(mark.note.trim())) {
+        prepaNotes.push(mark.note.trim());
+      }
+    });
+    return {
+      kpi: {
+        total: totalChrono,
+        target: targetMs,
+        gap: gapMs,
+        potential
+      },
+      phases,
+      operators,
+      topContrib,
+      topOps,
+      events: eventsList,
+      prepa: {
+        percent: Math.round((prepaCompleted / prepaTotal) * 100),
+        duration: state.prepaElapsedMs,
+        notes: prepaNotes
+      }
+    };
+  }
+
+  function renderAnalysis() {
+    const analysis = computeAnalysis();
+    const target = totalTargetMinutes();
+    els.kpiGrid.innerHTML = `
+      <div class="kpi-card"><span>Durée totale</span><strong>${formatDuration(analysis.kpi.total)}</strong></div>
+      <div class="kpi-card"><span>Cible (min)</span><strong>${target.toFixed(1)}</strong></div>
+      <div class="kpi-card"><span>Écart</span><strong class="${analysis.kpi.gap>0 ? 'bad' : ''}">${formatDuration(analysis.kpi.gap)}</strong></div>
+      <div class="kpi-card"><span>Gain potentiel</span><strong>${formatDuration(analysis.kpi.potential)}</strong></div>
+    `;
+    els.phaseDistribution.innerHTML = '';
+    analysis.phases.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      row.innerHTML = `<div class="label"><span>${escapeHtml(item.phase)}</span><span>${formatDuration(item.duration)} · ${item.percent}%</span></div><div class="bar"><div class="fill" style="width:${item.percent}%;"></div></div>`;
+      els.phaseDistribution.appendChild(row);
+    });
+    els.phaseDistributionTarget.textContent = `Cible ${(target).toFixed(1)} min`;
+    els.operatorDistribution.innerHTML = '';
+    analysis.operators.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      row.innerHTML = `<div class="label"><span>${escapeHtml(item.operator)}</span><span>${formatDuration(item.duration)} · ${item.percent}%</span></div><div class="bar"><div class="fill" style="width:${item.percent}%;"></div></div>`;
+      els.operatorDistribution.appendChild(row);
+    });
+    els.operatorDistributionTarget.textContent = `${analysis.operators.length} opérateurs`;
+    if (analysis.topContrib.length) {
+      els.topContrib.innerHTML = analysis.topContrib.map(item => `<li>${escapeHtml(item.phase)} (+${formatDuration(item.gap)})</li>`).join('');
+    } else {
+      els.topContrib.innerHTML = '<li>Aucun dépassement</li>';
+    }
+    els.topOps.innerHTML = analysis.topOps.length ? analysis.topOps.map(item => `<li>${escapeHtml(item.label)} (${formatDuration(item.duration)})</li>`).join('') : '<li>—</li>';
+    els.perturbateurs.innerHTML = analysis.events.length ? analysis.events.map(e => `<li>${escapeHtml(e.label)} (${e.count})</li>`).join('') : '<li>—</li>';
+    const prepaNotesHtml = analysis.prepa.notes.length
+      ? `<ul>${analysis.prepa.notes.map(note => `<li>${escapeHtml(note)}</li>`).join('')}</ul>`
+      : '<span class="label-muted">Aucun commentaire</span>';
+    els.prepaSummary.innerHTML = `
+      <div><strong>${analysis.prepa.percent}%</strong> de la checklist complétée</div>
+      <div>Temps total HC: ${formatDuration(analysis.prepa.duration)}</div>
+      <div>Commentaires:<br>${prepaNotesHtml}</div>
+    `;
+  }
+
+  function buildPhaseTables() {
+    els.phaseTables.innerHTML = '';
+    phasesList.forEach(phase => {
+      const section = document.createElement('section');
+      section.className = 'section-group';
+      const isHC = phase === 'Activité CHGT de PO';
+      section.innerHTML = `
+        <details open>
+          <summary><strong>${phase}</strong> ${isHC ? '<span class="badge hc">HC</span>' : ''}</summary>
+          <div class="batch-actions">
+            <button type="button" class="ghost" data-phase="${phase}" data-action="add">Ajouter une opération</button>
+            <button type="button" class="ghost" data-phase="${phase}" data-action="assign">Définir opérateur</button>
+            <button type="button" class="ghost" data-phase="${phase}" data-action="time">Définir temps</button>
+            <label class="import-group">Importer CSV<input type="file" data-phase="${phase}" accept=".csv"></label>
+            <button type="button" class="ghost" data-phase="${phase}" data-action="export-csv">Exporter CSV</button>
+            <button type="button" class="ghost" data-phase="${phase}" data-action="export-json">Exporter JSON</button>
+          </div>
+          <div class="phase-table-wrapper">
+            <table class="param-table" data-phase="${phase}">
+              <thead>
+                <tr><th title="Inclure cette opération dans le SMED (décocher si non applicable)">Incluse ?</th><th>Opération</th><th>Temps cible (min)</th><th>Opérateur</th><th>Détails (optionnel)</th><th></th></tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot><tr><td colspan="6">Σ ${phase}: <strong class="phase-total">0 min</strong></td></tr></tfoot>
+            </table>
+          </div>
+        </details>
+      `;
+      els.phaseTables.appendChild(section);
+      const tbody = section.querySelector('tbody');
+      const table = section.querySelector('table');
+      (state.phases[phase] || []).forEach((operation, index) => {
+        tbody.appendChild(buildPhaseRow(phase, operation, index));
+      });
+      updatePhaseTotal(table, phase);
+      section.addEventListener('change', handlePhaseInputChange);
+      section.querySelectorAll('button[data-phase]').forEach(btn => btn.addEventListener('click', handlePhaseAction));
+      const fileInput = section.querySelector('input[type="file"]');
+      fileInput.addEventListener('change', handleImportCsv);
+      enableDragAndDrop(tbody, phase);
+    });
+  }
+
+  function buildPhaseRow(phase, operation, index) {
+    const tr = document.createElement('tr');
+    tr.draggable = true;
+    const opId = operation.id || newId();
+    operation.id = opId;
+    tr.dataset.id = opId;
+    const enabled = operation.enabled !== false;
+    operation.enabled = enabled;
+    tr.innerHTML = `
+      <td><input type="checkbox" data-field="enabled" title="Inclure cette opération dans le SMED (décocher si non applicable)" ${enabled ? 'checked' : ''}></td>
+      <td><input type="text" data-field="name" value="${escapeHtml(operation.name || '')}"></td>
+      <td><input type="number" step="0.5" min="0" data-field="targetMin" value="${operation.targetMin || 0}"></td>
+      <td><select data-field="operatorIndex"></select></td>
+      <td><textarea data-field="details" placeholder="Checklist, sous-étapes, remarques…">${escapeHtml(operation.details || '')}</textarea></td>
+      <td class="row-tools"><button type="button" class="ghost" data-action="delete">Suppr.</button></td>
+    `;
+    const select = tr.querySelector('select');
+    populateOperatorSelect(select, operation.operatorIndex);
+    tr.querySelector('[data-action="delete"]').addEventListener('click', () => {
+      const idx = Array.from(tr.parentElement.children).indexOf(tr);
+      state.phases[phase].splice(idx,1);
+      saveState(true);
+      buildPhaseTables();
+      renderOperatorColumns();
+      updateTargets();
+      updateAnalysisDelayed();
+    });
+    return tr;
+  }
+
+  function populateOperatorSelect(select, selectedIndex) {
+    select.innerHTML = '';
+    state.operators.forEach((op, idx) => {
+      if (!op && idx > 0) return;
+      const option = document.createElement('option');
+      option.value = idx;
+      option.textContent = op || `Opérateur ${idx+1}`;
+      if (idx === (typeof selectedIndex === 'number' ? selectedIndex : state.defaultOperatorIndex)) option.selected = true;
+      select.appendChild(option);
+    });
+  }
+
+  function handlePhaseInputChange(event) {
+    const input = event.target;
+    const row = input.closest('tr');
+    if (!row) return;
+    const phase = input.closest('table').dataset.phase;
+    const idx = Array.from(row.parentElement.children).indexOf(row);
+    const field = input.dataset.field;
+    if (!field) return;
+    if (field === 'enabled') {
+      state.phases[phase][idx].enabled = input.checked;
+      saveState();
+      updatePhaseTotal(input.closest('table'), phase);
+      updateTargets();
+      renderOperatorColumns();
+      updateAnalysisDelayed();
+      return;
+    }
+    if (field === 'name') {
+      state.phases[phase][idx][field] = input.value;
+    } else if (field === 'details') {
+      state.phases[phase][idx][field] = input.value;
+    } else {
+      const numeric = Number(input.value);
+      if (field === 'operatorIndex') {
+        state.phases[phase][idx][field] = Number.isFinite(numeric) ? numeric : state.defaultOperatorIndex;
+      } else {
+        state.phases[phase][idx][field] = Number.isFinite(numeric) ? numeric : 0;
+      }
+    }
+    saveState();
+    updatePhaseTotal(input.closest('table'), phase);
+    updateTargets();
+    renderOperatorColumns();
+    updateAnalysisDelayed();
+  }
+
+  function handlePhaseAction(event) {
+    const btn = event.currentTarget;
+    const phase = btn.dataset.phase;
+    const action = btn.dataset.action;
+    if (action === 'add') {
+      state.phases[phase].push({ id: newId(), name: 'Nouvelle opération', targetMin: 1, operatorIndex: state.defaultOperatorIndex, enabled: true, details: '' });
+      saveState(true);
+      buildPhaseTables();
+      renderOperatorColumns();
+      updateTargets();
+      return;
+    }
+    const table = els.phaseTables.querySelector(`table[data-phase="${phase}"]`);
+    const selected = Array.from(table.querySelectorAll('tbody tr')).filter(row => {
+      const checkbox = row.querySelector('input[data-field="enabled"]');
+      return checkbox ? checkbox.checked : false;
+    });
+    if (action === 'assign') {
+      const operator = prompt('Index opérateur (1-4) :', state.defaultOperatorIndex + 1);
+      const idx = Number(operator) - 1;
+      if (!Number.isInteger(idx) || idx < 0 || idx > 3) return;
+      selected.forEach(row => {
+        const rowIndex = Array.from(row.parentElement.children).indexOf(row);
+        state.phases[phase][rowIndex].operatorIndex = idx;
+      });
+      saveState();
+      buildPhaseTables();
+      renderOperatorColumns();
+    }
+    if (action === 'time') {
+      const value = Number(prompt('Temps cible (min) :', 1));
+      if (!Number.isFinite(value)) return;
+      selected.forEach(row => {
+        const rowIndex = Array.from(row.parentElement.children).indexOf(row);
+        state.phases[phase][rowIndex].targetMin = value;
+      });
+      saveState();
+      buildPhaseTables();
+      renderOperatorColumns();
+      updateTargets();
+    }
+    if (action === 'export-csv') {
+      const rows = state.phases[phase].map(op => {
+        const operatorIdx = typeof op.operatorIndex === 'number' ? op.operatorIndex : state.defaultOperatorIndex;
+        const operatorLabel = getCurrentOperatorName(operatorIdx || 0);
+        return `${op.name};${op.targetMin};${operatorLabel};${op.enabled === false ? 0 : 1};${sanitizeCsvText(op.details)}`;
+      });
+      const csvContent = ['operation;temps_min;operateur;incluse;details'].concat(rows).join('\n');
+      downloadFile(`phase_${phase.replace(/\s+/g,'_')}.csv`, `\uFEFF${csvContent}`, 'text/csv;charset=utf-8');
+    }
+    if (action === 'export-json') {
+      downloadFile(`phase_${phase.replace(/\s+/g,'_')}.json`, JSON.stringify(state.phases[phase], null, 2), 'application/json');
+    }
+  }
+
+  function handleImportCsv(event) {
+    const input = event.target;
+    const phase = input.dataset.phase;
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      let text = e.target.result;
+      if (typeof text !== 'string') {
+        text = new TextDecoder('utf-8').decode(text);
+      }
+      if (text.charCodeAt(0) === 0xFEFF) {
+        text = text.slice(1);
+      }
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      const entries = lines.slice(1).map(line => {
+        if (!line.trim()) return null;
+        const parts = line.split(';');
+        const name = parts[0];
+        const time = parts[1];
+        const operator = parts[2];
+        const includedRaw = parts[3];
+        const detailsRaw = parts[4];
+        const cleanedName = (name || '').trim();
+        const numeric = Number.parseFloat((time || '').replace(',', '.'));
+        const operatorLabel = (operator || '').trim().toLowerCase();
+        const matchedIndex = state.operators.findIndex(op => (op || '').trim().toLowerCase() === operatorLabel && operatorLabel);
+        const operatorIndex = matchedIndex >= 0 ? matchedIndex : state.defaultOperatorIndex;
+        const enabled = includedRaw == null ? true : includedRaw.trim() !== '0';
+        return {
+          id: newId(),
+          name: cleanedName || 'Opération',
+          targetMin: Number.isFinite(numeric) ? numeric : 0,
+          operatorIndex,
+          enabled,
+          details: typeof detailsRaw === 'string' ? detailsRaw.replace(/\r/g,'').trim() : ''
+        };
+      }).filter(Boolean);
+      if (entries.length) {
+        state.phases[phase] = entries;
+        saveState(true);
+        buildPhaseTables();
+        renderOperatorColumns();
+        updateTargets();
+        updateAnalysisDelayed();
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+    input.value = '';
+  }
+
+  function updatePhaseTotal(table, phase) {
+    const total = state.phases[phase]
+      .filter(op => op.enabled !== false)
+      .reduce((sum, op) => sum + Number(op.targetMin || 0), 0);
+    const cell = table.querySelector('.phase-total');
+    if (cell) cell.textContent = `${total.toFixed(1)} min`;
+  }
+
+  function enableDragAndDrop(tbody, phase) {
+    let dragged;
+    tbody.addEventListener('dragstart', event => {
+      dragged = event.target;
+      dragged.classList.add('dragging');
+      event.dataTransfer.effectAllowed = 'move';
+    });
+    tbody.addEventListener('dragend', event => {
+      event.target.classList.remove('dragging');
+      dragged = null;
+    });
+    tbody.addEventListener('dragover', event => {
+      event.preventDefault();
+      const after = getDragAfterElement(tbody, event.clientY);
+      if (!after) {
+        tbody.appendChild(dragged);
+      } else {
+        tbody.insertBefore(dragged, after);
+      }
+    });
+    tbody.addEventListener('drop', () => {
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      state.phases[phase] = rows.map(row => {
+        const enabledInput = row.querySelector('input[data-field="enabled"]');
+        const detailsInput = row.querySelector('[data-field="details"]');
+        return {
+          id: row.dataset.id || newId(),
+          name: row.querySelector('input[data-field="name"]').value,
+          targetMin: Number(row.querySelector('input[data-field="targetMin"]').value) || 0,
+          operatorIndex: Number(row.querySelector('select[data-field="operatorIndex"]').value),
+          enabled: enabledInput ? enabledInput.checked : true,
+          details: detailsInput ? detailsInput.value : ''
+        };
+      });
+      saveState();
+      renderOperatorColumns();
+      updateTargets();
+      updateAnalysisDelayed();
+    });
+  }
+
+  function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('tr:not(.dragging)')];
+    return draggableElements.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        return { offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+
+  function buildDefaultsForm() {
+    state.operators.forEach((op, idx) => {
+      if (els.opInputs[idx]) {
+        els.opInputs[idx].value = op;
+      }
+    });
+    els.defaultOperator.innerHTML = '';
+    state.operators.forEach((op, idx) => {
+      if (!op && idx > 0) return;
+      const option = document.createElement('option');
+      option.value = idx;
+      option.textContent = op || `Opérateur ${idx+1}`;
+      if (idx === state.defaultOperatorIndex) option.selected = true;
+      els.defaultOperator.appendChild(option);
+    });
+    els.alertInput.value = state.alertMin;
+    els.multiView.checked = !!state.multiView;
+  }
+
+  function renderEventsList() {
+    if (!els.eventsList) return;
+    els.eventsList.innerHTML = '';
+    const events = state.events.filter(label => label && label.trim());
+    if (!events.length) {
+      const empty = document.createElement('li');
+      empty.className = 'empty';
+      empty.textContent = 'Aucun événement enregistré';
+      els.eventsList.appendChild(empty);
+      return;
+    }
+    events.forEach((label, index) => {
+      const item = document.createElement('li');
+      const span = document.createElement('span');
+      span.textContent = label;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.index = index;
+      btn.textContent = 'Suppr.';
+      btn.addEventListener('click', () => removePresetEvent(index));
+      item.append(span, btn);
+      els.eventsList.appendChild(item);
+    });
+  }
+
+  function removePresetEvent(index) {
+    if (!Number.isInteger(index)) return;
+    state.events.splice(index, 1);
+    saveState();
+    renderEventsList();
+    closeQuickEventMenu();
+  }
+
+  function handleEventFormSubmit(event) {
+    event.preventDefault();
+    if (!els.eventInput) return;
+    const value = els.eventInput.value.trim();
+    if (!value) return;
+    state.events.push(value);
+    els.eventInput.value = '';
+    saveState(true);
+    renderEventsList();
+  }
+
+  function updateBrandLine() {
+    if (!els.brandLine) return;
+    const value = (state.line || '').trim();
+    els.brandLine.textContent = value ? value.toUpperCase() : '—';
+  }
+
+  function refreshAll() {
+    els.po.value = state.po;
+    els.mode.value = state.mode;
+    if (els.line) els.line.value = state.line || '';
+    updateBrandLine();
+    renderPhaseChips();
+    renderOperatorColumns();
+    updateTargets();
+    updateDisplay();
+    renderLog();
+    buildPhaseTables();
+    buildDefaultsForm();
+    renderEventsList();
+    renderAnalysis();
+    if (els.start) {
+      const hasStarted = state.marks.some(m => m.kind === 'start');
+      if (state.activePhase === 'Activité CHGT de PO') {
+        els.start.disabled = true;
+        els.start.classList.remove('primary');
+        els.start.classList.add('secondary');
+        els.start.innerHTML = '<span class="icon">▶</span>Démarrer';
+      } else {
+        els.start.classList.add('primary');
+        els.start.classList.remove('secondary');
+        if (hasStarted) {
+          els.start.disabled = true;
+          els.start.innerHTML = 'En cours';
+        } else {
+          els.start.disabled = false;
+          els.start.innerHTML = '<span class="icon">▶</span>Démarrer';
+        }
+      }
+    }
+    if (state.runningSince) {
+      requestTick();
+    } else {
+      cancelAnimationFrame(runtime.animationFrame);
+    }
+  }
+
+  function updateAnalysisDelayed() {
+    clearTimeout(runtime.analysisTimeout);
+    runtime.analysisTimeout = setTimeout(renderAnalysis, 350);
+  }
+
+  function bindEvents() {
+    els.navButtons.forEach(btn => btn.addEventListener('click', () => switchPage(btn.dataset.target, btn)));
+    if (els.line) {
+      els.line.addEventListener('input', () => {
+        state.line = els.line.value;
+        saveState();
+        updateBrandLine();
+      });
+    }
+    if (els.start) {
+      els.start.addEventListener('click', () => {
+        if (state.activePhase === 'Activité CHGT de PO') {
+          showToast('Phase hors chrono : démarrage indisponible', 'info');
+          return;
+        }
+        startTimer();
+      });
+    }
+    // PATCH op-event — libellé bouton global
+    els.lap.innerHTML = '<span class="icon">✦</span>Évènement Hors changement';
+    els.lap.setAttribute('aria-haspopup', 'menu');
+    els.lap.setAttribute('aria-expanded', 'false');
+    els.lap.addEventListener('click', openQuickEventMenu);
+    const openRpt = document.getElementById('openReport');
+    if (openRpt) openRpt.addEventListener('click', () => exportHtml());
+    els.end.addEventListener('click', async () => {
+      const ok = confirm('Confirmer la fin du changement ?');
+      if (!ok) return;
+      await finishChange();
+    });
+    els.reset.addEventListener('click', () => {
+      if (!confirm('Réinitialiser la session ?')) return;
+
+      // 1) Chrono & journal
+      state.marks = [];
+      state.elapsedMs = 0;
+      state.prepaElapsedMs = 0;
+      state.sessionElapsedMs = 0;
+      state.runningSince = null;
+      state.sessionStart = Date.now();
+
+      // 2) Opérations validées -> vidage total
+      state.completedOpsByOp = {};
+      ensureCompletedStructures(); // recrée des Set vides par opérateur/phase
+
+      // 3) Repartir en Prépa (HC) et UI cohérente
+      state.activePhase = 'Activité CHGT de PO';
+      if (els.start) {
+        els.start.disabled = true;
+        els.start.classList.remove('primary');
+        els.start.classList.add('secondary');
+        els.start.innerHTML = '<span class="icon">▶</span>Démarrer';
+      }
+      runtime.focusedOperator = state.defaultOperatorIndex || 0;
+      cancelAnimationFrame(runtime.animationFrame);
+
+      // 4) Sauvegarde + re-render + recentrage opé courante
+      saveState(true);
+      runtime.shouldScrollToCurrent = true;
+      refreshAll();
+    });
+    els.exportCsv.addEventListener('click', exportCsv);
+    els.exportHtml.addEventListener('click', () => exportHtml());
+    els.logTable.addEventListener('input', handleNoteEdit);
+    els.mode.addEventListener('change', () => { state.mode = els.mode.value; saveState(); updateDisplay(); });
+    els.po.addEventListener('input', () => { state.po = els.po.value; saveState(); });
+    els.fullscreen.addEventListener('click', toggleFullscreen);
+    if (els.toggleJournal) {
+      els.toggleJournal.addEventListener('click', () => toggleJournalVisibility());
+    }
+    els.saveParams.addEventListener('click', () => { saveState(true); });
+    els.resetParams.addEventListener('click', () => { if (confirm('Réinitialiser toutes les phases ?')) resetState(); });
+    els.refreshAnalysis.addEventListener('click', renderAnalysis);
+    els.alertInput.addEventListener('change', () => { state.alertMin = Number(els.alertInput.value); saveState(); updateTargets(); updateDisplay(); });
+    els.suggestAlert.addEventListener('click', () => {
+      const suggestion = Math.max(0, totalTargetMinutes() * 0.85);
+      const rounded = Math.round(suggestion * 2) / 2;
+      const displayValue = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+      els.alertInput.value = displayValue;
+      state.alertMin = rounded;
+      saveState(true);
+      updateTargets();
+      updateDisplay();
+    });
+    els.defaultOperator.addEventListener('change', () => {
+      state.defaultOperatorIndex = Number(els.defaultOperator.value);
+      saveState();
+      renderOperatorColumns();
+      renderPhaseChips();
+      updateAnalysisDelayed();
+    });
+    els.opInputs.forEach((input, idx) => {
+      if (!input) return;
+      input.addEventListener('input', () => {
+        const previousName = getCurrentOperatorName(idx);
+        state.operators[idx] = input.value;
+        const newName = getCurrentOperatorName(idx);
+        if (previousName !== newName && state.completedOpsByOp[previousName]) {
+          state.completedOpsByOp[newName] = state.completedOpsByOp[previousName];
+          delete state.completedOpsByOp[previousName];
+        }
+        if (previousName !== newName) {
+          state.marks.forEach(mark => {
+            if (mark.operator === previousName) {
+              mark.operator = newName;
+            }
+          });
+        }
+        ensureCompletedStructures();
+        saveState();
+        buildDefaultsForm();
+        renderOperatorColumns();
+      });
+    });
+    els.multiView.addEventListener('change', () => {
+      state.multiView = els.multiView.checked;
+      saveState();
+      renderOperatorColumns();
+    });
+    if (els.eventForm) {
+      els.eventForm.addEventListener('submit', handleEventFormSubmit);
+    }
+    // PATCH rm-toggle: suppression du toggle "seulement la courante"
+    // PATCH SMED — undo dernière validation
+    const undoBtn = document.getElementById('undoLast');
+    if (undoBtn){
+      undoBtn.addEventListener('click', ()=>{
+        // dernière marque d'opération (kind === 'op') dans la phase active pour l'opérateur focalisé
+        const opName = getCurrentOperatorName(runtime.focusedOperator);
+        for (let i = state.marks.length - 1; i >= 0; i--){
+          const m = state.marks[i];
+          if (m.kind === 'op' && m.operator === opName && m.phase === state.activePhase){
+            // retirer du set "complété"
+            ensureCompletedStructures();
+            state.completedOpsByOp[opName][state.activePhase].delete(m.opId || m.label);
+            // supprimer la marque
+            state.marks.splice(i,1);
+            saveState(true);
+            renderOperatorColumns();
+            renderLog();
+            updateAnalysisDelayed();
+            showToast('Dernière opération annulée');
+            return;
+          }
+        }
+        showToast('Rien à annuler', 'info');
+      });
+    }
+    document.addEventListener('keydown', handleShortcuts);
+  }
+
+  function toggleJournalVisibility(force) {
+    const shouldHide = typeof force === 'boolean' ? force : !runtime.journalHidden;
+    runtime.journalHidden = shouldHide;
+    document.body.classList.toggle('journal-hidden', runtime.journalHidden);
+    if (els.toggleJournal) {
+      els.toggleJournal.setAttribute('aria-pressed', runtime.journalHidden ? 'true' : 'false');
+      els.toggleJournal.title = 'Afficher/Masquer Journal';
+      els.toggleJournal.innerHTML = `<span class="icon">🗂</span>${runtime.journalHidden ? 'Afficher le journal' : 'Masquer le journal'}`;
+    }
+  }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => showToast('Impossible de passer en plein écran', 'error'));
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  function hideSplash(immediate) {
+    if (!els.splash) return;
+    const splashNode = els.splash;
+    const cleanup = () => {
+      document.body.classList.remove('splash-lock');
+      if (splashNode && splashNode.parentNode) {
+        splashNode.parentNode.removeChild(splashNode);
+      }
+      if (els.splash === splashNode) {
+        els.splash = null;
+      }
+    };
+    splashNode.setAttribute('aria-hidden', 'true');
+    if (immediate) {
+      cleanup();
+      return;
+    }
+    splashNode.classList.add('is-hiding');
+    setTimeout(cleanup, 600);
+  }
+
+  function initSplashScreen() {
+    setupLogoContainer(document.querySelector('.brand-mark.logo-container'));
+
+    if (!els.splash) return;
+
+    setupLogoContainer(document.querySelector('.splash-logo-wrap'));
+
+    let seen = false;
+    try {
+      seen = sessionStorage.getItem('smed_splash_seen') === '1';
+    } catch (err) {
+      seen = false;
+    }
+    if (seen) {
+      hideSplash(true);
+      return;
+    }
+    try {
+      sessionStorage.setItem('smed_splash_seen', '1');
+    } catch (err) {
+      /* ignore */
+    }
+
+    document.body.classList.add('splash-lock');
+
+    const tasks = [];
+    const preload = new Image();
+    preload.src = 'smed-logo.png';
+    if (typeof preload.decode === 'function') {
+      tasks.push(preload.decode().catch(() => {}));
+    } else {
+      tasks.push(new Promise(resolve => {
+        if (preload.complete) {
+          resolve();
+        } else {
+          preload.addEventListener('load', () => resolve(), { once: true });
+          preload.addEventListener('error', () => resolve(), { once: true });
+        }
+      }));
+    }
+
+    if (document.fonts && document.fonts.ready) {
+      tasks.push(document.fonts.ready.catch(() => {}));
+    }
+
+    tasks.push(new Promise(resolve => setTimeout(resolve, 2600)));
+
+    Promise.all(tasks).then(() => hideSplash(false)).catch(() => hideSplash(false));
+  }
+
+  function handleShortcuts(event) {
+    if (event.target && ['INPUT','TEXTAREA','SELECT'].includes(event.target.tagName)) return;
+    if (event.key.toLowerCase() === 'l') {
+      event.preventDefault();
+      els.lap.click();
+    }
+    if (event.key.toLowerCase() === 'j') {
+      event.preventDefault();
+      toggleJournalVisibility();
+    }
+    if (['1','2','3','4'].includes(event.key)) {
+      runtime.focusedOperator = Number(event.key) - 1;
+      renderOperatorColumns();
+    }
+  }
+
+  function switchPage(pageId, btn) {
+    closeQuickEventMenu();
+    runtime.activePage = pageId;
+    els.pages.forEach(page => page.classList.toggle('active', page.id === pageId));
+    els.navButtons.forEach(nav => {
+      const active = nav === btn;
+      nav.classList.toggle('active', active);
+      nav.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    renderAnalysis();
+  }
+
+  function updateClock() {
+    els.now.textContent = new Date().toLocaleString('fr-FR', { hour12: false });
+    requestAnimationFrame(updateClock);
+  }
+
+  bindEvents();
+  initSplashScreen();
+  toggleJournalVisibility(runtime.journalHidden);
+  refreshAll();
+  updateClock();
+  renderAnalysis();
+})();
+</script>
+</body>
+</html>
