@@ -1,11 +1,9 @@
-<!-- // OPTIMISATIONS UX - 2024-05-30 -->
+<!-- // CORRECTIONS FINALES - 2025-10-02 -->
 <!--
-Modifications apportées :
-- Simplification lexicale (Préparation / Prépa / Ajouter un imprévu).
-- Indicateur d'état du chrono et animation de validation des opérations.
-- Bouton d'annulation persistant avec contexte d'opération.
-- Amélioration du bouton de démarrage et toasts d'encouragement.
-- Clarification visuelle de l'opération courante.
+Corrections appliquées :
+- Vérification de l'encodage UTF-8.
+- Bouton « Annuler dernière » repositionné dans l'en-tête.
+- Libellé opérateur mis à jour en « Ajouter un imprévu ».
 -->
 <!DOCTYPE html>
 <html lang="fr">
@@ -554,8 +552,8 @@ tfoot td { font-weight:700; }
 }
 .undo-floating {
   position:fixed;
-  bottom:24px;
-  left:24px;
+  top:24px;
+  right:24px;
   z-index:1000;
   background:rgba(23,36,71,.95);
   border:1px solid rgba(255,255,255,.18);
@@ -1043,6 +1041,13 @@ summary { cursor:pointer; }
       <div class="header-actions">
         <button id="toggleJournal" class="ghost" type="button" aria-pressed="false" title="Afficher/Masquer Journal"><span class="icon">🗂</span>Masquer le journal</button>
         <button id="fullscreen" class="ghost" type="button" aria-label="Plein écran"><span class="icon">⤢</span>Plein écran</button>
+        <button id="undoLast" type="button" class="undo-floating" disabled>
+          <span class="icon">↺</span>
+          <div class="undo-text">
+            <strong>Annuler dernière</strong>
+            <small>Aucune opération</small>
+          </div>
+        </button>
       </div>
     </div>
   </header>
@@ -1090,18 +1095,7 @@ summary { cursor:pointer; }
               <div class="chip-row" id="phaseChips" role="tablist"></div>
               <div class="label-muted" id="now"></div>
             </div>
-            <!-- PATCH SMED — toolbar opérateurs -->
-            <div id="opsToolbar" class="ops-toolbar" aria-label="Outils affichage opérations">
-              <!-- PATCH rm-toggle: suppression du toggle "Montrer seulement la courante" -->
-              <button id="undoLast" type="button" class="undo-floating" disabled>
-                <span class="icon">↺</span>
-                <div class="undo-text">
-                  <strong>Annuler dernière</strong>
-                  <small>Aucune opération</small>
-                </div>
-              </button>
-              <span id="hcMini" class="badge" style="display:none;"></span>
-            </div>
+            <span id="hcMini" class="badge" style="display:none;"></span>
             <div class="ops-columns" id="opsPhaseChips"></div>
           </div>
         </div>
@@ -1718,7 +1712,7 @@ summary { cursor:pointer; }
       const evtBtn = document.createElement('button');
       evtBtn.type = 'button';
       evtBtn.className = 'op-evt-btn';
-      evtBtn.textContent = "Imprévu Prépa";
+      evtBtn.textContent = "Ajouter un imprévu";
       evtBtn.addEventListener('click', (e)=> {
         e.stopPropagation();
         openOperatorEventMenu(idx, evtBtn);
