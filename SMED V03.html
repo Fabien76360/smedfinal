@@ -551,13 +551,11 @@ tfoot td { font-weight:700; }
   gap:12px;
 }
 .hc-undo-stack {
-  position:fixed;
-  top:24px;
-  right:24px;
-  z-index:1000;
-  display:grid;
-  gap:12px;
-  justify-items:end;
+  margin-top:12px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:10px;
 }
 .undo-floating {
   position:relative;
@@ -1048,16 +1046,6 @@ summary { cursor:pointer; }
         <button id="toggleJournal" class="ghost" type="button" aria-pressed="false" title="Afficher/Masquer Journal"><span class="icon">🗂</span>Masquer le journal</button>
         <button id="fullscreen" class="ghost" type="button" aria-label="Plein écran"><span class="icon">⤢</span>Plein écran</button>
       </div>
-      <div class="hc-undo-stack">
-        <span id="hcMini" class="badge" style="display:none;"></span>
-        <button id="undoLast" type="button" class="undo-floating" disabled>
-          <span class="icon">↺</span>
-          <div class="undo-text">
-            <strong>Annuler dernière</strong>
-            <small>Aucune opération</small>
-          </div>
-        </button>
-      </div>
     </div>
   </header>
   <main>
@@ -1102,6 +1090,16 @@ summary { cursor:pointer; }
               </div>
               <div class="progress-bar" id="progress" aria-hidden="true"><div class="progress-value"></div></div>
               <div class="chip-row" id="phaseChips" role="tablist"></div>
+              <div class="hc-undo-stack">
+                <span id="hcMini" class="badge" style="display:none;"></span>
+                <button id="undoLast" type="button" class="undo-floating" disabled>
+                  <span class="icon">↺</span>
+                  <div class="undo-text">
+                    <strong>Annuler dernière</strong>
+                    <small>Aucune opération</small>
+                  </div>
+                </button>
+              </div>
               <div class="label-muted" id="now"></div>
             </div>
             <div class="ops-columns" id="opsPhaseChips"></div>
