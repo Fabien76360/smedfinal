@@ -1,3 +1,12 @@
+<!-- // OPTIMISATIONS UX - 2024-05-30 -->
+<!--
+Modifications apportées :
+- Simplification lexicale (Préparation / Prépa / Ajouter un imprévu).
+- Indicateur d'état du chrono et animation de validation des opérations.
+- Bouton d'annulation persistant avec contexte d'opération.
+- Amélioration du bouton de démarrage et toasts d'encouragement.
+- Clarification visuelle de l'opération courante.
+-->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -200,8 +209,23 @@ body.journal-hidden .timer-grid {
   border:1px solid rgba(61,220,151,.35);
 }
 .chrono-main{display:grid; justify-items:center; gap:6px}
+.chrono-state-row{display:flex; align-items:center; gap:12px}
 .chrono-display{font-variant-numeric:tabular-nums; font-size:3rem; font-weight:700}
 .chrono-state{font-size:.8rem; color:var(--muted); letter-spacing:.08em; text-transform:uppercase}
+.chrono-status {
+  padding:8px 16px;
+  border-radius:999px;
+  font-weight:700;
+  font-size:0.9rem;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  background:rgba(61,220,151,.15);
+  color:var(--accent);
+}
+.chrono-status.ok { background:rgba(61,220,151,.15); color:var(--accent); }
+.chrono-status.warn { background:rgba(255,183,3,.15); color:var(--warn); }
+.chrono-status.danger { background:rgba(239,71,111,.15); color:var(--danger); }
 .chrono-meta{display:flex; gap:16px}
 .chrono-meta .meta{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
   padding:10px 14px; border-radius:14px; min-width:120px; text-align:center}
@@ -473,7 +497,17 @@ button:not(:disabled):active { transform:translateY(1px); }
 .op-pill.current {
   border-color:var(--accent);
   outline:2px solid rgba(61,220,151,.35);
-  transform:scale(1.08);
+  border-left:4px solid var(--accent);
+  padding-left:12px;
+  margin:8px 0;
+  transform:scale(1.05);
+}
+.op-pill.validated {
+  animation:opValidated .3s ease;
+}
+@keyframes opValidated {
+  0% { transform:scale(1.05); background:rgba(61,220,151,.35); }
+  100% { transform:scale(1); background:rgba(23,36,71,.8); }
 }
 .op-pill.done {
   background:rgba(61,220,151,.15);
@@ -517,6 +551,43 @@ tfoot td { font-weight:700; }
   display:flex;
   flex-wrap:wrap;
   gap:12px;
+}
+.undo-floating {
+  position:fixed;
+  bottom:24px;
+  left:24px;
+  z-index:1000;
+  background:rgba(23,36,71,.95);
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:999px;
+  padding:12px 20px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,.3);
+  cursor:pointer;
+  transition:transform .2s ease, box-shadow .2s ease, opacity .2s ease;
+}
+.undo-floating .undo-text {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  line-height:1.2;
+}
+.undo-floating:hover {
+  transform:translateY(-2px);
+  box-shadow:0 12px 32px rgba(0,0,0,.4);
+}
+.undo-floating small {
+  opacity:0.7;
+  font-size:0.75rem;
+  display:block;
+}
+.undo-floating strong { font-size:0.85rem; }
+.undo-floating[disabled] {
+  opacity:0.45;
+  cursor:not-allowed;
+  pointer-events:none;
 }
 #fullscreen {
   justify-self:flex-end;
@@ -991,7 +1062,10 @@ summary { cursor:pointer; }
                   <div class="chrono-main">
                     <div class="chrono-title label-muted">Chronomètre</div>
                     <div id="display" class="chrono-display">00:00:00</div>
-                    <div id="state" class="chrono-state">Prêt</div>
+                    <div class="chrono-state-row">
+                      <div id="state" class="chrono-state">Prêt</div>
+                      <div id="chronoStatus" class="chrono-status ok" role="status" aria-live="polite" hidden></div>
+                    </div>
                   </div>
                   <div class="chrono-meta">
                     <div class="meta">
@@ -1007,7 +1081,7 @@ summary { cursor:pointer; }
                 <div class="main-actions">
                   <button id="start" class="primary" type="button"><span class="icon">▶</span>Démarrer</button>
                   <!-- PATCH op-event: libellé bouton mis à jour -->
-                  <button id="lap" class="secondary" type="button"><span class="icon">✦</span>Évènement Hors changement</button>
+                  <button id="lap" class="secondary" type="button"><span class="icon">✦</span>Ajouter un imprévu</button>
                   <button id="end" class="warn" type="button"><span class="icon">■</span>Fin du changement</button>
                   <button id="reset" class="danger" type="button"><span class="icon">↺</span>Reset session</button>
                 </div>
@@ -1019,7 +1093,13 @@ summary { cursor:pointer; }
             <!-- PATCH SMED — toolbar opérateurs -->
             <div id="opsToolbar" class="ops-toolbar" aria-label="Outils affichage opérations">
               <!-- PATCH rm-toggle: suppression du toggle "Montrer seulement la courante" -->
-              <button id="undoLast" type="button" class="ghost">↺ Annuler dernière</button>
+              <button id="undoLast" type="button" class="undo-floating" disabled>
+                <span class="icon">↺</span>
+                <div class="undo-text">
+                  <strong>Annuler dernière</strong>
+                  <small>Aucune opération</small>
+                </div>
+              </button>
               <span id="hcMini" class="badge" style="display:none;"></span>
             </div>
             <div class="ops-columns" id="opsPhaseChips"></div>
@@ -1037,7 +1117,7 @@ summary { cursor:pointer; }
                   <th>#</th>
                   <th>Horodatage</th>
                   <th>Durée</th>
-                  <th>HC</th>
+                  <th>Prépa</th>
                   <th>Phase</th>
                   <th>Opérateur</th>
                   <th>Libellé</th>
@@ -1127,7 +1207,7 @@ summary { cursor:pointer; }
             <div class="bar-chart" id="phaseDistribution"></div>
             <div class="panel-title"><h3>Répartition par opérateurs</h3><span id="operatorDistributionTarget" class="label-muted"></span></div>
             <div class="bar-chart" id="operatorDistribution"></div>
-            <div class="panel-title"><h3>Prépa (HC)</h3><span class="label-muted">Checklist & notes</span></div>
+            <div class="panel-title"><h3>Préparation (Prépa)</h3><span class="label-muted">Checklist & notes</span></div>
             <div class="notice" id="prepaSummary"></div>
           </div>
         </div>
@@ -1223,6 +1303,7 @@ summary { cursor:pointer; }
     end: document.getElementById('end'),
     reset: document.getElementById('reset'),
     state: document.getElementById('state'),
+    chronoStatus: document.getElementById('chronoStatus'),
     progress: document.getElementById('progress').querySelector('.progress-value'),
     targetMin: document.getElementById('targetMin'),
     warnMin: document.getElementById('warnMin'),
@@ -1260,6 +1341,7 @@ summary { cursor:pointer; }
     operatorDistributionTarget: document.getElementById('operatorDistributionTarget'),
     prepaSummary: document.getElementById('prepaSummary'),
     progressContainer: document.getElementById('progress'),
+    undoLast: document.getElementById('undoLast'),
     eventForm: document.getElementById('eventForm'),
     eventInput: document.getElementById('eventInput'),
     eventsList: document.getElementById('eventsList'),
@@ -1275,7 +1357,9 @@ summary { cursor:pointer; }
     journalHidden: false,
     analysisTimeout: null,
     shouldScrollToCurrent: false,
-    quickEventMenu: null
+    quickEventMenu: null,
+    lastValidatedOpId: null,
+    lastValidatedOperator: null
   };
 
   function loadState() {
@@ -1433,6 +1517,14 @@ summary { cursor:pointer; }
     return String(value).replace(/[&<>"']/g, ch => entities.get(ch));
   }
 
+  function isPreparationPhase(phase) {
+    return phase === 'Activité CHGT de PO';
+  }
+
+  function displayPhaseName(phase) {
+    return isPreparationPhase(phase) ? 'Préparation' : phase;
+  }
+
   function formatDetailsHtml(text) {
     if (!text || !text.trim()) {
       return '<span class="label-muted">Aucun détail renseigné</span>';
@@ -1451,6 +1543,54 @@ summary { cursor:pointer; }
   }
   function totalTargetMinutes() {
     return timedPhases.reduce((sum, phase) => sum + targetMinutesForPhase(phase), 0);
+  }
+
+  function getPhaseDurationMs(phase) {
+    if (!phase) return 0;
+    if (isPreparationPhase(phase)) {
+      return state.prepaElapsedMs || 0;
+    }
+    let total = 0;
+    let previousTime = 0;
+    let phaseContext = state.marks.length ? state.marks[0].phase : state.activePhase;
+    state.marks.forEach(mark => {
+      const duration = mark.durationMs || Math.max(0, mark.t - previousTime);
+      const isPhaseChange = mark.kind === 'event' && mark.label?.toLowerCase().includes('changement de phase');
+      const attributedPhase = isPhaseChange ? phaseContext : mark.phase;
+      if (attributedPhase === phase) {
+        total += duration;
+      }
+      previousTime = mark.t;
+      phaseContext = mark.phase;
+    });
+    return total;
+  }
+
+  function getLastUndoableMark() {
+    const operatorName = getCurrentOperatorName(runtime.focusedOperator);
+    for (let i = state.marks.length - 1; i >= 0; i--) {
+      const mark = state.marks[i];
+      if (mark.kind === 'op' && mark.operator === operatorName && mark.phase === state.activePhase) {
+        return mark;
+      }
+    }
+    return null;
+  }
+
+  function updateUndoButton() {
+    if (!els.undoLast) return;
+    const strongEl = els.undoLast.querySelector('.undo-text strong');
+    const detailEl = els.undoLast.querySelector('.undo-text small');
+    const mark = getLastUndoableMark();
+    if (mark) {
+      els.undoLast.disabled = false;
+      if (strongEl) strongEl.textContent = 'Annuler dernière';
+      if (detailEl) detailEl.textContent = mark.label || displayPhaseName(mark.phase);
+    } else {
+      els.undoLast.disabled = true;
+      if (strongEl) strongEl.textContent = 'Annuler dernière';
+      if (detailEl) detailEl.textContent = 'Aucune opération';
+    }
   }
 
   function updateTargets() {
@@ -1517,7 +1657,9 @@ summary { cursor:pointer; }
       btn.type = 'button';
       btn.className = 'phase-chip' + (state.activePhase === phase ? ' active' : '');
       btn.dataset.phase = phase;
-      btn.innerHTML = `<span class="dot"></span><span>${phase}${phase === 'Activité CHGT de PO' ? ' (HC)' : ''}</span>`;
+      const isPrepa = isPreparationPhase(phase);
+      const label = displayPhaseName(phase);
+      btn.innerHTML = `<span class="dot"></span><span>${label}${isPrepa ? ' (Prépa)' : ''}</span>`;
       btn.addEventListener('click', () => {
         changePhase(phase);
       });
@@ -1530,7 +1672,7 @@ summary { cursor:pointer; }
         const ops = (state.phases['Activité CHGT de PO'] || []).filter(o=>o.enabled !== false);
         const total = ops.length || 0;
         const done = state.marks.filter(m => m.phase === 'Activité CHGT de PO' && m.kind === 'op').length;
-        hcBadge.textContent = `HC : ${done}/${total} · ${formatDuration(state.prepaElapsedMs)}`;
+        hcBadge.textContent = `Prépa : ${done}/${total} · ${formatDuration(state.prepaElapsedMs)}`;
         hcBadge.style.display = 'inline-block';
       }else{
         hcBadge.style.display = 'none';
@@ -1576,7 +1718,7 @@ summary { cursor:pointer; }
       const evtBtn = document.createElement('button');
       evtBtn.type = 'button';
       evtBtn.className = 'op-evt-btn';
-      evtBtn.textContent = "Évènement HC";
+      evtBtn.textContent = "Imprévu Prépa";
       evtBtn.addEventListener('click', (e)=> {
         e.stopPropagation();
         openOperatorEventMenu(idx, evtBtn);
@@ -1695,6 +1837,14 @@ summary { cursor:pointer; }
         }
 
         head.appendChild(pill);
+        if (runtime.lastValidatedOpId && runtime.lastValidatedOperator === idx && operation.id === runtime.lastValidatedOpId) {
+          requestAnimationFrame(() => {
+            pill.classList.add('validated');
+            setTimeout(() => pill.classList.remove('validated'), 300);
+          });
+          runtime.lastValidatedOpId = null;
+          runtime.lastValidatedOperator = null;
+        }
         wrapper.appendChild(head);
         wrapper.appendChild(detailPanel);
 
@@ -1744,6 +1894,7 @@ summary { cursor:pointer; }
       runtime.shouldScrollToCurrent = false;
       requestAnimationFrame(scrollCurrentOperationIntoView);
     }
+    updateUndoButton();
   }
 
   function scrollCurrentOperationIntoView() {
@@ -1836,10 +1987,13 @@ summary { cursor:pointer; }
       hc: state.activePhase === 'Activité CHGT de PO',
       durationMs: duration
     });
+    runtime.lastValidatedOpId = operation.id;
+    runtime.lastValidatedOperator = operatorIndex;
     saveState();
     runtime.shouldScrollToCurrent = true;
     renderOperatorColumns();
     renderLog();
+    showToast(`✓ ${operation.name} validée`);
     updateAnalysisDelayed();
   }
 
@@ -1861,12 +2015,12 @@ summary { cursor:pointer; }
     state.activePhase = phase;
     const hasStarted = state.marks.some(m => m.kind === 'start');
     if (els.start) {
-      if (phase === 'Activité CHGT de PO') {
-        els.start.disabled = true;
-        els.start.classList.remove('primary');
-        els.start.classList.add('secondary');
-        els.start.innerHTML = '<span class="icon">▶</span>Démarrer';
-        els.state.textContent = 'Phase hors chrono';
+      if (isPreparationPhase(phase)) {
+        els.start.disabled = false;
+        els.start.classList.add('primary');
+        els.start.classList.remove('secondary');
+        els.start.innerHTML = '<span class="icon">▶</span>Passer au chrono';
+        els.state.textContent = 'Phase Préparation';
       } else {
         els.start.classList.add('primary');
         els.start.classList.remove('secondary');
@@ -1886,6 +2040,15 @@ summary { cursor:pointer; }
       kind: 'event',
       hc: phase === 'Activité CHGT de PO'
     });
+    if (previousPhase && previousPhase !== phase && !isPreparationPhase(previousPhase)) {
+      const targetMs = targetMinutesForPhase(previousPhase) * 60000;
+      if (targetMs > 0) {
+        const durationMs = getPhaseDurationMs(previousPhase);
+        if (durationMs > 0 && durationMs < targetMs) {
+          showToast(`✓ ${displayPhaseName(previousPhase)} terminée en avance`);
+        }
+      }
+    }
     renderPhaseChips();
     renderOperatorColumns();
     renderLog();
@@ -1899,8 +2062,10 @@ summary { cursor:pointer; }
   }
 
   function startTimer() {
-    if (state.activePhase === 'Activité CHGT de PO') {
-      showToast('Phase hors chrono : démarrage indisponible', 'info');
+    if (isPreparationPhase(state.activePhase)) {
+      changePhase('Début de PO');
+    }
+    if (isPreparationPhase(state.activePhase)) {
       return;
     }
     if (state.runningSince) return;
@@ -1956,8 +2121,29 @@ summary { cursor:pointer; }
     const pct = targetMs ? Math.min(100, (currentElapsed/targetMs)*100) : 0;
     els.progress.style.width = `${Math.min(100, pct)}%`;
     els.progress.style.background = currentElapsed <= warnMs ? 'var(--accent)' : currentElapsed <= targetMs ? 'var(--warn)' : 'var(--danger)';
+    if (els.chronoStatus) {
+      const statusEl = els.chronoStatus;
+      if (!targetMs) {
+        statusEl.textContent = '';
+        statusEl.className = 'chrono-status ok';
+        statusEl.hidden = true;
+      } else {
+        statusEl.hidden = false;
+        let statusClass = 'ok';
+        let statusText = '✓ Dans les temps';
+        if (currentElapsed >= targetMs) {
+          statusClass = 'danger';
+          statusText = '! Dépassement';
+        } else if (currentElapsed >= warnMs) {
+          statusClass = 'warn';
+          statusText = '⚠ Attention';
+        }
+        statusEl.className = `chrono-status ${statusClass}`;
+        statusEl.textContent = statusText;
+      }
+    }
     if (state.activePhase === 'Activité CHGT de PO') {
-      els.state.textContent = 'Phase hors chrono';
+      els.state.textContent = 'Phase Préparation';
     } else {
       if (state.runningSince) {
         els.state.textContent = 'En cours';
@@ -2081,7 +2267,7 @@ summary { cursor:pointer; }
     const custom = document.createElement('button');
     custom.type='button'; custom.textContent='Autre…';
     custom.addEventListener('click', ()=>{
-      const manual = prompt("Libellé de l'événement HC :");
+      const manual = prompt("Libellé de l'imprévu Prépa :");
       if (manual && manual.trim()) add(manual.trim());
     });
     menu.appendChild(custom);
@@ -2112,7 +2298,7 @@ summary { cursor:pointer; }
     renderLog();
     renderOperatorColumns();
     updateAnalysisDelayed();
-    showToast(`Événement HC ajouté pour ${operatorName}`);
+    showToast(`Imprévu Prépa ajouté pour ${operatorName}`);
   }
 
   async function finishChange() {
@@ -2132,6 +2318,13 @@ summary { cursor:pointer; }
     cancelAnimationFrame(runtime.animationFrame);
     updateDisplay();
     showToast('Changement terminé');
+    const targetMs = totalTargetMinutes() * 60000;
+    const actualMs = computeElapsedMs();
+    if (targetMs > 0 && actualMs < targetMs) {
+      setTimeout(() => {
+        showToast(`🎯 Objectif atteint ! Temps : ${formatDuration(actualMs)} (cible : ${formatDuration(targetMs)})`);
+      }, 350);
+    }
     const poSafe = (state.po && state.po.trim() ? state.po.trim() : 'PO').replace(/[^\w-]+/g, '_') || 'PO';
     const lineSafe = (state.line && state.line.trim() ? state.line.trim() : 'L29').replace(/[^\w-]+/g, '_') || 'L29';
     const stamp = new Date().toISOString().slice(0, 16).replace(/:/g, '-');
@@ -2154,8 +2347,8 @@ summary { cursor:pointer; }
         <td>${index + 1}</td>
         <td>${formatDuration(mark.t)}</td>
         <td>${formatDuration(duration)}</td>
-        <td>${mark.hc ? '<span class="badge hc">HC</span>' : 'Non'}</td>
-        <td>${escapeHtml(mark.phase)}</td>
+        <td>${mark.hc ? '<span class="badge hc">Prépa</span>' : 'Non'}</td>
+        <td>${escapeHtml(displayPhaseName(mark.phase))}</td>
         <td>${escapeHtml(mark.operator || '')}</td>
         <td>${escapeHtml(mark.label)}</td>
         <td class="note-cell" contenteditable="true" data-index="${index}">${escapeHtml(mark.note || '')}</td>
@@ -2295,16 +2488,16 @@ ${buildReportHtml()}
     const modeLabel = state.mode === 'down' ? 'Chrono décroissant' : 'Chrono croissant';
     const targetMinutes = kpi.target ? (kpi.target / 60000).toFixed(1) : '0.0';
     const phasesRows = analysis.phases.length
-      ? analysis.phases.map(item => `<tr><td>${escapeHtml(item.phase)}</td><td>${formatDuration(item.duration)}</td><td>${item.percent}%</td><td>${item.gap ? '+' + formatDuration(item.gap) : '—'}</td></tr>`).join('')
+      ? analysis.phases.map(item => `<tr><td>${escapeHtml(displayPhaseName(item.phase))}</td><td>${formatDuration(item.duration)}</td><td>${item.percent}%</td><td>${item.gap ? '+' + formatDuration(item.gap) : '—'}</td></tr>`).join('')
       : '<tr><td colspan="4" class="muted">Aucune phase chronométrée enregistrée</td></tr>';
     const operatorRows = analysis.operators.length
       ? analysis.operators.map(item => `<tr><td>${escapeHtml(item.operator)}</td><td>${formatDuration(item.duration)}</td><td>${item.percent}%</td></tr>`).join('')
       : '<tr><td colspan="3" class="muted">Aucun opérateur chronométré</td></tr>';
     const topContribList = analysis.topContrib.length
-      ? analysis.topContrib.map(item => `<li>${escapeHtml(item.phase)} · +${formatDuration(item.gap)}</li>`).join('')
+      ? analysis.topContrib.map(item => `<li>${escapeHtml(displayPhaseName(item.phase))} · +${formatDuration(item.gap)}</li>`).join('')
       : '<li class="muted">Aucun dépassement</li>';
     const topOpsList = analysis.topOps.length
-      ? analysis.topOps.map(item => `<li>${escapeHtml(item.label)} (${escapeHtml(item.phase)}) – ${formatDuration(item.duration)}</li>`).join('')
+      ? analysis.topOps.map(item => `<li>${escapeHtml(item.label)} (${escapeHtml(displayPhaseName(item.phase))}) – ${formatDuration(item.duration)}</li>`).join('')
       : '<li class="muted">—</li>';
     const perturbList = analysis.events.length
       ? analysis.events.map(item => `<li>${escapeHtml(item.label)} (${item.count})</li>`).join('')
@@ -2313,7 +2506,7 @@ ${buildReportHtml()}
       ? `<ul>${analysis.prepa.notes.map(note => `<li>${escapeHtml(note)}</li>`).join('')}</ul>`
       : '<p class="muted">Aucun commentaire</p>';
     const journalRows = state.marks.length
-      ? state.marks.map((mark, idx) => `<tr><td>${idx + 1}</td><td>${formatDuration(mark.t)}</td><td>${formatDuration(mark.durationMs || 0)}</td><td>${mark.hc ? '<span class="badge hc">HC</span>' : 'Non'}</td><td>${escapeHtml(mark.phase)}</td><td>${escapeHtml(mark.operator || '')}</td><td>${escapeHtml(mark.label)}</td><td>${escapeHtml(mark.note || '')}</td></tr>`).join('')
+      ? state.marks.map((mark, idx) => `<tr><td>${idx + 1}</td><td>${formatDuration(mark.t)}</td><td>${formatDuration(mark.durationMs || 0)}</td><td>${mark.hc ? '<span class="badge hc">Prépa</span>' : 'Non'}</td><td>${escapeHtml(displayPhaseName(mark.phase))}</td><td>${escapeHtml(mark.operator || '')}</td><td>${escapeHtml(mark.label)}</td><td>${escapeHtml(mark.note || '')}</td></tr>`).join('')
       : '<tr><td colspan="8" class="muted">Journal vide</td></tr>';
     return `
       <header class="report-header">
@@ -2349,17 +2542,17 @@ ${buildReportHtml()}
         </div>
       </section>
       <section class="section">
-        <h2>Prépa (HC)</h2>
+        <h2>Préparation</h2>
         <div class="prepa-card">
-          <div><span class="badge hc">HC</span> Checklist complétée à <strong>${analysis.prepa.percent}%</strong></div>
-          <div>Temps total hors chrono : <strong>${formatDuration(analysis.prepa.duration)}</strong></div>
+          <div><span class="badge hc">Prépa</span> Checklist complétée à <strong>${analysis.prepa.percent}%</strong></div>
+          <div>Temps total Préparation : <strong>${formatDuration(analysis.prepa.duration)}</strong></div>
           <div>Commentaires :</div>
           ${prepaNotes}
         </div>
       </section>
       <section class="section">
         <h2>Journal des événements</h2>
-        <table class="journal-table"><thead><tr><th>#</th><th>Horodatage</th><th>Durée</th><th>HC</th><th>Phase</th><th>Opérateur</th><th>Libellé</th><th>Note</th></tr></thead><tbody>${journalRows}</tbody></table>
+        <table class="journal-table"><thead><tr><th>#</th><th>Horodatage</th><th>Durée</th><th>Prépa</th><th>Phase</th><th>Opérateur</th><th>Libellé</th><th>Note</th></tr></thead><tbody>${journalRows}</tbody></table>
       </section>
     `;
   }
@@ -2453,7 +2646,7 @@ ${buildReportHtml()}
     analysis.phases.forEach(item => {
       const row = document.createElement('div');
       row.className = 'bar-row';
-      row.innerHTML = `<div class="label"><span>${escapeHtml(item.phase)}</span><span>${formatDuration(item.duration)} · ${item.percent}%</span></div><div class="bar"><div class="fill" style="width:${item.percent}%;"></div></div>`;
+      row.innerHTML = `<div class="label"><span>${escapeHtml(displayPhaseName(item.phase))}</span><span>${formatDuration(item.duration)} · ${item.percent}%</span></div><div class="bar"><div class="fill" style="width:${item.percent}%;"></div></div>`;
       els.phaseDistribution.appendChild(row);
     });
     els.phaseDistributionTarget.textContent = `Cible ${(target).toFixed(1)} min`;
@@ -2466,7 +2659,7 @@ ${buildReportHtml()}
     });
     els.operatorDistributionTarget.textContent = `${analysis.operators.length} opérateurs`;
     if (analysis.topContrib.length) {
-      els.topContrib.innerHTML = analysis.topContrib.map(item => `<li>${escapeHtml(item.phase)} (+${formatDuration(item.gap)})</li>`).join('');
+      els.topContrib.innerHTML = analysis.topContrib.map(item => `<li>${escapeHtml(displayPhaseName(item.phase))} (+${formatDuration(item.gap)})</li>`).join('');
     } else {
       els.topContrib.innerHTML = '<li>Aucun dépassement</li>';
     }
@@ -2477,7 +2670,7 @@ ${buildReportHtml()}
       : '<span class="label-muted">Aucun commentaire</span>';
     els.prepaSummary.innerHTML = `
       <div><strong>${analysis.prepa.percent}%</strong> de la checklist complétée</div>
-      <div>Temps total HC: ${formatDuration(analysis.prepa.duration)}</div>
+      <div>Temps total Préparation : ${formatDuration(analysis.prepa.duration)}</div>
       <div>Commentaires:<br>${prepaNotesHtml}</div>
     `;
   }
@@ -2490,7 +2683,7 @@ ${buildReportHtml()}
       const isHC = phase === 'Activité CHGT de PO';
       section.innerHTML = `
         <details open>
-          <summary><strong>${phase}</strong> ${isHC ? '<span class="badge hc">HC</span>' : ''}</summary>
+          <summary><strong>${displayPhaseName(phase)}</strong> ${isHC ? '<span class="badge hc">Prépa</span>' : ''}</summary>
           <div class="batch-actions">
             <button type="button" class="ghost" data-phase="${phase}" data-action="add">Ajouter une opération</button>
             <button type="button" class="ghost" data-phase="${phase}" data-action="assign">Définir opérateur</button>
@@ -2505,7 +2698,7 @@ ${buildReportHtml()}
                 <tr><th title="Inclure cette opération dans le SMED (décocher si non applicable)">Incluse ?</th><th>Opération</th><th>Temps cible (min)</th><th>Opérateur</th><th>Détails (optionnel)</th><th></th></tr>
               </thead>
               <tbody></tbody>
-              <tfoot><tr><td colspan="6">Σ ${phase}: <strong class="phase-total">0 min</strong></td></tr></tfoot>
+              <tfoot><tr><td colspan="6">Σ ${displayPhaseName(phase)}: <strong class="phase-total">0 min</strong></td></tr></tfoot>
             </table>
           </div>
         </details>
@@ -2856,11 +3049,11 @@ ${buildReportHtml()}
     renderAnalysis();
     if (els.start) {
       const hasStarted = state.marks.some(m => m.kind === 'start');
-      if (state.activePhase === 'Activité CHGT de PO') {
-        els.start.disabled = true;
-        els.start.classList.remove('primary');
-        els.start.classList.add('secondary');
-        els.start.innerHTML = '<span class="icon">▶</span>Démarrer';
+      if (isPreparationPhase(state.activePhase)) {
+        els.start.disabled = false;
+        els.start.classList.add('primary');
+        els.start.classList.remove('secondary');
+        els.start.innerHTML = '<span class="icon">▶</span>Passer au chrono';
       } else {
         els.start.classList.add('primary');
         els.start.classList.remove('secondary');
@@ -2896,15 +3089,11 @@ ${buildReportHtml()}
     }
     if (els.start) {
       els.start.addEventListener('click', () => {
-        if (state.activePhase === 'Activité CHGT de PO') {
-          showToast('Phase hors chrono : démarrage indisponible', 'info');
-          return;
-        }
         startTimer();
       });
     }
     // PATCH op-event — libellé bouton global
-    els.lap.innerHTML = '<span class="icon">✦</span>Évènement Hors changement';
+    els.lap.innerHTML = '<span class="icon">✦</span>Ajouter un imprévu';
     els.lap.setAttribute('aria-haspopup', 'menu');
     els.lap.setAttribute('aria-expanded', 'false');
     els.lap.addEventListener('click', openQuickEventMenu);
@@ -2930,13 +3119,13 @@ ${buildReportHtml()}
       state.completedOpsByOp = {};
       ensureCompletedStructures(); // recrée des Set vides par opérateur/phase
 
-      // 3) Repartir en Prépa (HC) et UI cohérente
+      // 3) Repartir en Préparation (Prépa) et UI cohérente
       state.activePhase = 'Activité CHGT de PO';
       if (els.start) {
-        els.start.disabled = true;
-        els.start.classList.remove('primary');
-        els.start.classList.add('secondary');
-        els.start.innerHTML = '<span class="icon">▶</span>Démarrer';
+        els.start.disabled = false;
+        els.start.classList.add('primary');
+        els.start.classList.remove('secondary');
+        els.start.innerHTML = '<span class="icon">▶</span>Passer au chrono';
       }
       runtime.focusedOperator = state.defaultOperatorIndex || 0;
       cancelAnimationFrame(runtime.animationFrame);
@@ -3010,18 +3199,18 @@ ${buildReportHtml()}
     // PATCH rm-toggle: suppression du toggle "seulement la courante"
     // PATCH SMED — undo dernière validation
     const undoBtn = document.getElementById('undoLast');
-    if (undoBtn){
-      undoBtn.addEventListener('click', ()=>{
+    if (undoBtn) {
+      undoBtn.addEventListener('click', () => {
         // dernière marque d'opération (kind === 'op') dans la phase active pour l'opérateur focalisé
         const opName = getCurrentOperatorName(runtime.focusedOperator);
-        for (let i = state.marks.length - 1; i >= 0; i--){
+        for (let i = state.marks.length - 1; i >= 0; i--) {
           const m = state.marks[i];
-          if (m.kind === 'op' && m.operator === opName && m.phase === state.activePhase){
+          if (m.kind === 'op' && m.operator === opName && m.phase === state.activePhase) {
             // retirer du set "complété"
             ensureCompletedStructures();
             state.completedOpsByOp[opName][state.activePhase].delete(m.opId || m.label);
             // supprimer la marque
-            state.marks.splice(i,1);
+            state.marks.splice(i, 1);
             saveState(true);
             renderOperatorColumns();
             renderLog();
@@ -3030,6 +3219,7 @@ ${buildReportHtml()}
             return;
           }
         }
+        updateUndoButton();
         showToast('Rien à annuler', 'info');
       });
     }
