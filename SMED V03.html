@@ -550,11 +550,17 @@ tfoot td { font-weight:700; }
   flex-wrap:wrap;
   gap:12px;
 }
-.undo-floating {
+.hc-undo-stack {
   position:fixed;
   top:24px;
   right:24px;
   z-index:1000;
+  display:grid;
+  gap:12px;
+  justify-items:end;
+}
+.undo-floating {
+  position:relative;
   background:rgba(23,36,71,.95);
   border:1px solid rgba(255,255,255,.18);
   border-radius:999px;
@@ -1041,6 +1047,9 @@ summary { cursor:pointer; }
       <div class="header-actions">
         <button id="toggleJournal" class="ghost" type="button" aria-pressed="false" title="Afficher/Masquer Journal"><span class="icon">🗂</span>Masquer le journal</button>
         <button id="fullscreen" class="ghost" type="button" aria-label="Plein écran"><span class="icon">⤢</span>Plein écran</button>
+      </div>
+      <div class="hc-undo-stack">
+        <span id="hcMini" class="badge" style="display:none;"></span>
         <button id="undoLast" type="button" class="undo-floating" disabled>
           <span class="icon">↺</span>
           <div class="undo-text">
@@ -1095,7 +1104,6 @@ summary { cursor:pointer; }
               <div class="chip-row" id="phaseChips" role="tablist"></div>
               <div class="label-muted" id="now"></div>
             </div>
-            <span id="hcMini" class="badge" style="display:none;"></span>
             <div class="ops-columns" id="opsPhaseChips"></div>
           </div>
         </div>
