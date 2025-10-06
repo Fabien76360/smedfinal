@@ -799,6 +799,9 @@ summary { cursor:pointer; }
   background:var(--accent);
   transition:width .3s ease;
 }
+.bar-row .fill.good { background:var(--accent); }
+.bar-row .fill.warn { background:var(--warn); }
+.bar-row .fill.bad { background:var(--danger); }
 .list-card { display:grid; gap:12px; }
 .list-card ol, .list-card ul { margin:0; padding-left:20px; display:grid; gap:8px; }
 .list-card li { font-size:0.9rem; }
@@ -992,6 +995,35 @@ summary { cursor:pointer; }
   .page { display:block !IMPORTANT; }
   .ops-columns, .kpi-grid, .bar-chart { page-break-inside:avoid; }
 }
+/* PATCH ANALYSE PREMIUM */
+.analyse-kpi-enhanced { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
+.kpi-card--color-good { border-left:4px solid var(--accent); }
+.kpi-card--color-warn { border-left:4px solid var(--warn); }
+.kpi-card--color-bad { border-left:4px solid var(--danger); }
+.analyse-kpi-enhanced .kpi-card small { font-size:.78rem; color:var(--muted); }
+.bar-row--enhanced { position:relative; }
+.bar-row--enhanced:hover .bar-tooltip { display:block; }
+.bar-tooltip { display:none; position:absolute; top:-60px; left:50%; transform:translateX(-50%); background:rgba(15,26,52,.95); border:1px solid rgba(255,255,255,.18); border-radius:var(--radius); padding:8px 12px; font-size:.85rem; z-index:100; white-space:nowrap; }
+.analyse-critical-ops table { width:100%; border-collapse:collapse; font-size:.9rem; }
+.analyse-critical-ops th,
+.analyse-critical-ops td { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.08); }
+.badge--fire { background:rgba(239,71,111,.2); color:var(--danger); border:1px solid var(--danger); }
+.badge--warn { background:rgba(255,183,3,.2); color:var(--warn); border:1px solid var(--warn); }
+.analyse-insights { background:rgba(255,183,3,.1); border:1px solid rgba(255,183,3,.35); border-radius:var(--radius-lg); padding:18px; }
+.insights-text { font-size:.95rem; line-height:1.6; }
+.insights-text li { margin-bottom:6px; }
+.analyse-perturbateurs-enhanced ul { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.analyse-perturbateurs-enhanced li { display:flex; justify-content:space-between; align-items:center; background:rgba(15,26,52,.45); padding:10px 12px; border-radius:var(--radius); border:1px solid rgba(255,255,255,.08); }
+.analyse-comparison { margin-top:24px; display:grid; gap:16px; }
+.comparison-controls { display:flex; flex-wrap:wrap; gap:12px; }
+.comparison-controls label { display:grid; gap:4px; font-size:.85rem; color:var(--muted); }
+.comparison-controls select { min-width:140px; border-radius:var(--radius-sm); border:1px solid rgba(255,255,255,.16); background:rgba(15,26,52,.6); padding:6px 10px; color:inherit; }
+.comparison-chart { min-height:160px; border:1px solid rgba(255,255,255,.12); border-radius:var(--radius-lg); display:flex; align-items:center; justify-content:center; padding:12px; background:rgba(15,26,52,.4); }
+.comparison-chart svg { width:100%; height:100%; }
+.comparison-legend { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; font-size:.85rem; }
+.comparison-legend span { display:inline-flex; align-items:center; gap:6px; }
+.comparison-legend span::before { content:''; width:12px; height:12px; border-radius:999px; background:var(--accent); }
+.comparison-legend span[data-color="warn"]::before { background:var(--warn); }
 /* PATCH SMED — styles opérateur */
 .operator-header .meta-line{ display:flex; align-items:center; gap:10px; font-variant-numeric: tabular-nums; }
 .operator-header .meta-line .time{ font-weight:700; }
@@ -1178,28 +1210,42 @@ summary { cursor:pointer; }
     </section>
     <section id="analysisPage" class="page" aria-labelledby="Analyse">
       <div class="panel">
-        <div class="panel-title"><h2>Analyse</h2><div class="chip" id="openReport">Rapport</div><button id="refreshAnalysis" class="ghost" type="button">Rafraîchir</button></div>
+        <div class="panel-title"><h2>Analyse</h2><div class="chip" id="openReport">Rapport</div><button id="exportReportAdvanced" class="ghost" type="button">Export 1-page</button><button id="refreshAnalysis" class="ghost" type="button">Rafraîchir</button></div>
         <div class="analysis-grid">
-          <div class="panel compact list-card">
-            <div class="kpi-grid" id="kpiGrid"></div>
+          <div class="panel compact">
+            <div class="analyse-kpi-enhanced" id="kpiGrid"></div>
             <div class="list-card">
-              <h3>Top contributeurs à l'écart</h3>
+              <h3>Top 3 pertes</h3>
               <ol id="topContrib"></ol>
             </div>
-            <div class="list-card">
-              <h3>Top opérations longues</h3>
-              <ol id="topOps"></ol>
+            <div class="analyse-critical-ops" id="topOps">
+              <h3>Opérations critiques</h3>
+              <table aria-label="Opérations critiques">
+                <thead><tr><th>Opération</th><th>Phase</th><th>Écart</th><th>Note</th></tr></thead>
+                <tbody id="criticalOpsBody"></tbody>
+              </table>
             </div>
-            <div class="list-card">
-              <h3>Perturbateurs fréquents</h3>
+            <div class="analyse-perturbateurs-enhanced">
+              <h3>Perturbateurs récurrents</h3>
               <ul id="perturbateurs"></ul>
             </div>
+            <div class="analyse-insights">
+              <h3>Insights Kaizen</h3>
+              <ul id="insightsList" class="insights-text"></ul>
+            </div>
           </div>
-          <div class="panel compact list-card">
-            <div class="panel-title"><h3>Répartition par phases</h3><span id="phaseDistributionTarget" class="label-muted"></span></div>
+          <div class="panel compact">
+            <div class="panel-title"><h3>Phases – cible vs réel</h3><span id="phaseDistributionTarget" class="label-muted"></span></div>
             <div class="bar-chart" id="phaseDistribution"></div>
             <div class="panel-title"><h3>Répartition par opérateurs</h3><span id="operatorDistributionTarget" class="label-muted"></span></div>
             <div class="bar-chart" id="operatorDistribution"></div>
+            <div class="analyse-comparison">
+              <div class="comparison-controls">
+                <label>Session A<select id="comparisonSessionA" aria-label="Comparer la session A"></select></label>
+                <label>Session B<select id="comparisonSessionB" aria-label="Comparer la session B"></select></label>
+              </div>
+              <div class="comparison-chart" id="comparisonChart" role="img" aria-label="Comparaison historique des phases"></div>
+            </div>
             <div class="panel-title"><h3>Prépa (HC)</h3><span class="label-muted">Checklist & notes</span></div>
             <div class="notice" id="prepaSummary"></div>
           </div>
@@ -1327,11 +1373,17 @@ summary { cursor:pointer; }
     topContrib: document.getElementById('topContrib'),
     topOps: document.getElementById('topOps'),
     perturbateurs: document.getElementById('perturbateurs'),
+    criticalOpsBody: document.getElementById('criticalOpsBody'),
+    insightsList: document.getElementById('insightsList'),
+    comparisonSessionA: document.getElementById('comparisonSessionA'),
+    comparisonSessionB: document.getElementById('comparisonSessionB'),
+    comparisonChart: document.getElementById('comparisonChart'),
     phaseDistribution: document.getElementById('phaseDistribution'),
     operatorDistribution: document.getElementById('operatorDistribution'),
     phaseDistributionTarget: document.getElementById('phaseDistributionTarget'),
     operatorDistributionTarget: document.getElementById('operatorDistributionTarget'),
     prepaSummary: document.getElementById('prepaSummary'),
+    exportReportAdvanced: document.getElementById('exportReportAdvanced'),
     progressContainer: document.getElementById('progress'),
     eventForm: document.getElementById('eventForm'),
     eventInput: document.getElementById('eventInput'),
@@ -1348,7 +1400,9 @@ summary { cursor:pointer; }
     journalHidden: false,
     analysisTimeout: null,
     shouldScrollToCurrent: false,
-    quickEventMenu: null
+    quickEventMenu: null,
+    comparisonA: 'current',
+    comparisonB: 'target'
   };
   const phaseUiState = new Map();
   const phaseSections = new Map();
@@ -1495,6 +1549,11 @@ summary { cursor:pointer; }
     if (!showMillis) return `${h}:${m}:${s}`;
     const cent = String(Math.floor((ms % 1000)/10)).padStart(2,'0');
     return `${h}:${m}:${s}.${cent}`;
+  }
+
+  function formatMinutesValue(ms, digits = 1) {
+    if (!Number.isFinite(ms)) return '—';
+    return `${(ms / 60000).toFixed(digits)} min`;
   }
 
   function escapeHtml(value) {
@@ -2566,38 +2625,351 @@ ${buildReportHtml()}
     };
   }
 
-  function renderAnalysis() {
-    const analysis = computeAnalysis();
-    const target = totalTargetMinutes();
-    els.kpiGrid.innerHTML = `
-      <div class="kpi-card"><span>Durée totale</span><strong>${formatDuration(analysis.kpi.total)}</strong></div>
-      <div class="kpi-card"><span>Cible (min)</span><strong>${target.toFixed(1)}</strong></div>
-      <div class="kpi-card"><span>Écart</span><strong class="${analysis.kpi.gap>0 ? 'bad' : ''}">${formatDuration(analysis.kpi.gap)}</strong></div>
-      <div class="kpi-card"><span>Gain potentiel</span><strong>${formatDuration(analysis.kpi.potential)}</strong></div>
-    `;
-    els.phaseDistribution.innerHTML = '';
-    analysis.phases.forEach(item => {
-      const row = document.createElement('div');
-      row.className = 'bar-row';
-      row.innerHTML = `<div class="label"><span>${escapeHtml(item.phase)}</span><span>${formatDuration(item.duration)} · ${item.percent}%</span></div><div class="bar"><div class="fill" style="width:${item.percent}%;"></div></div>`;
-      els.phaseDistribution.appendChild(row);
+  function collectSessionMetrics() {
+    const phaseDurations = new Map();
+    const operationDurations = new Map();
+    const eventStats = new Map();
+    let previousTime = 0;
+    let totalTimedMs = 0;
+    let totalTimelineMs = 0;
+    let vaMs = 0;
+    let imprevusMs = 0;
+    let nonVaMs = 0;
+    let phaseContext = state.marks.length ? state.marks[0].phase : state.activePhase;
+    const hasMarks = state.marks.length > 0;
+    let hasHcMarks = false;
+
+    state.marks.forEach(mark => {
+      const duration = mark.durationMs || Math.max(0, mark.t - previousTime);
+      const isPhaseChange = mark.kind === 'event' && mark.label && mark.label.toLowerCase().includes('changement de phase');
+      const attributedPhase = isPhaseChange ? phaseContext : (mark.phase || phaseContext);
+      const isTimedPhase = timedPhases.includes(attributedPhase);
+      const isHc = mark.hc || attributedPhase === 'Activité CHGT de PO';
+      if (isHc) hasHcMarks = true;
+
+      totalTimelineMs += duration;
+
+      if (isTimedPhase && !isHc) {
+        totalTimedMs += duration;
+        phaseDurations.set(attributedPhase, (phaseDurations.get(attributedPhase) || 0) + duration);
+        if (mark.kind === 'op') {
+          vaMs += duration;
+          if (mark.opId) {
+            operationDurations.set(mark.opId, (operationDurations.get(mark.opId) || 0) + duration);
+          }
+        } else if (mark.kind === 'event' && !isPhaseChange) {
+          imprevusMs += duration;
+          if (mark.label) {
+            const current = eventStats.get(mark.label) || { count: 0, totalMs: 0 };
+            current.count += 1;
+            current.totalMs += duration;
+            eventStats.set(mark.label, current);
+          }
+        } else {
+          nonVaMs += duration;
+        }
+      } else {
+        nonVaMs += duration;
+        if (mark.kind === 'event' && mark.label && !isPhaseChange) {
+          const current = eventStats.get(mark.label) || { count: 0, totalMs: 0 };
+          current.count += 1;
+          current.totalMs += duration;
+          eventStats.set(mark.label, current);
+        }
+      }
+
+      previousTime = mark.t;
+      phaseContext = mark.phase || attributedPhase;
     });
-    els.phaseDistributionTarget.textContent = `Cible ${(target).toFixed(1)} min`;
-    els.operatorDistribution.innerHTML = '';
-    analysis.operators.forEach(item => {
-      const row = document.createElement('div');
-      row.className = 'bar-row';
-      row.innerHTML = `<div class="label"><span>${escapeHtml(item.operator)}</span><span>${formatDuration(item.duration)} · ${item.percent}%</span></div><div class="bar"><div class="fill" style="width:${item.percent}%;"></div></div>`;
-      els.operatorDistribution.appendChild(row);
-    });
-    els.operatorDistributionTarget.textContent = `${analysis.operators.length} opérateurs`;
-    if (analysis.topContrib.length) {
-      els.topContrib.innerHTML = analysis.topContrib.map(item => `<li>${escapeHtml(item.phase)} (+${formatDuration(item.gap)})</li>`).join('');
+
+    if (!hasMarks) {
+      totalTimedMs = state.elapsedMs || 0;
+      totalTimelineMs = totalTimedMs + (state.prepaElapsedMs || 0);
+      vaMs = totalTimedMs;
+      nonVaMs += state.prepaElapsedMs || 0;
+    } else if (!hasHcMarks && state.prepaElapsedMs) {
+      nonVaMs += state.prepaElapsedMs;
+      totalTimelineMs += state.prepaElapsedMs;
     } else {
-      els.topContrib.innerHTML = '<li>Aucun dépassement</li>';
+      totalTimelineMs = Math.max(totalTimelineMs, totalTimedMs);
     }
-    els.topOps.innerHTML = analysis.topOps.length ? analysis.topOps.map(item => `<li>${escapeHtml(item.label)} (${formatDuration(item.duration)})</li>`).join('') : '<li>—</li>';
-    els.perturbateurs.innerHTML = analysis.events.length ? analysis.events.map(e => `<li>${escapeHtml(e.label)} (${e.count})</li>`).join('') : '<li>—</li>';
+
+    // Heuristique :
+    //   - opérations (kind === 'op') = Valeur Ajoutée
+    //   - événements = Imprévus
+    //   - le reste (dont HC) = Non Valeur Ajoutée
+    return {
+      totalRealMs: totalTimedMs,
+      totalTimelineMs,
+      vaMs,
+      imprevusMs,
+      nonVaMs,
+      phaseDurations,
+      operationDurations,
+      eventStats
+    };
+  }
+
+  function computeKPI(metrics, extras = {}) {
+    const targetMs = totalTargetMinutes() * 60000;
+    const totalMs = metrics.totalRealMs || state.elapsedMs || 0;
+    const gapMs = totalMs - targetMs;
+    const performancePercent = targetMs ? (totalMs / targetMs) * 100 : 0;
+    const gapPercent = targetMs ? (gapMs / targetMs) * 100 : 0;
+    const base = Math.max(metrics.vaMs + metrics.nonVaMs + metrics.imprevusMs, 1);
+    const clampPercent = value => Number.isFinite(value) ? Math.max(0, value) : 0;
+
+    const result = {
+      totalMs,
+      targetMs,
+      gapMs,
+      gapPercent,
+      performancePercent,
+      va: { ms: metrics.vaMs, percent: clampPercent((metrics.vaMs / base) * 100) },
+      nonVa: { ms: metrics.nonVaMs, percent: clampPercent((metrics.nonVaMs / base) * 100) },
+      imprevus: { ms: metrics.imprevusMs, percent: clampPercent((metrics.imprevusMs / base) * 100) },
+      topLosses: []
+    };
+
+    const losses = [];
+    if (Array.isArray(extras.phaseComparison)) {
+      extras.phaseComparison.forEach(item => {
+        if (item.gapMs > 0) {
+          losses.push({ label: `Phase · ${item.phase}`, phase: item.phase, gapMs: item.gapMs });
+        }
+      });
+    }
+    if (Array.isArray(extras.criticalOps)) {
+      extras.criticalOps.forEach(item => {
+        if (item.gapMs > 0) {
+          losses.push({ label: `Opération · ${item.opName}`, phase: item.phase, gapMs: item.gapMs });
+        }
+      });
+    }
+    losses.sort((a, b) => b.gapMs - a.gapMs);
+    result.topLosses = losses.slice(0, 3);
+    return result;
+  }
+
+  function computePhaseComparison(metrics) {
+    return timedPhases.map(phase => {
+      const targetMs = targetMinutesForPhase(phase) * 60000;
+      const realMs = metrics.phaseDurations.get(phase) || 0;
+      const gapMs = realMs - targetMs;
+      const ratioPercent = targetMs ? (realMs / targetMs) * 100 : (realMs > 0 ? 999 : 0);
+      const gapPercent = targetMs ? ((realMs - targetMs) / targetMs) * 100 : (realMs > 0 ? 100 : 0);
+      let colorClass = 'good';
+      if (ratioPercent > 110) colorClass = 'bad';
+      else if (ratioPercent >= 85) colorClass = 'warn';
+      return { phase, realMs, targetMs, gapMs, gapPercent, ratioPercent, colorClass };
+    });
+  }
+
+  function computeCriticalOps(metrics) {
+    const items = [];
+    timedPhases.forEach(phase => {
+      (state.phases[phase] || []).forEach(op => {
+        if (!op || op.enabled === false) return;
+        const targetMs = Number(op.targetMin || 0) * 60000;
+        const realMs = metrics.operationDurations.get(op.id) || 0;
+        const gapMs = realMs - targetMs;
+        const gapPercent = targetMs ? (realMs / targetMs) * 100 : (realMs > 0 ? 999 : 0);
+        items.push({
+          opId: op.id,
+          opName: op.name || 'Sans nom',
+          phase,
+          realMs,
+          targetMs,
+          gapMs,
+          gapPercent,
+          hasFire: gapPercent > 120,
+          details: op.details || ''
+        });
+      });
+    });
+    items.sort((a, b) => (b.gapPercent || 0) - (a.gapPercent || 0));
+    return items;
+  }
+
+  function computePerturbateurs(metrics) {
+    return Array.from(metrics.eventStats.entries()).map(([label, info]) => ({
+      label,
+      count: info.count,
+      totalMs: info.totalMs,
+      hasWarning: info.count >= 3 || info.totalMs >= 5 * 60000
+    })).sort((a, b) => b.totalMs - a.totalMs);
+  }
+
+  function buildSessionSnapshots(phaseComparison) {
+    const snapshots = [];
+    const currentMap = new Map();
+    phaseComparison.forEach(item => currentMap.set(item.phase, item.realMs));
+    snapshots.push({ id: 'current', label: 'Session actuelle', data: currentMap });
+
+    const targetMap = new Map();
+    timedPhases.forEach(phase => {
+      targetMap.set(phase, targetMinutesForPhase(phase) * 60000);
+    });
+    snapshots.push({ id: 'target', label: 'Cible théorique', data: targetMap });
+
+    return snapshots;
+  }
+
+  function generateInsights({ kpi, phaseComparison, criticalOps, perturbateurs }) {
+    const insights = [];
+    if (Number.isFinite(kpi.performancePercent)) {
+      const deltaPercent = kpi.performancePercent - 100;
+      const gapLabel = formatDuration(Math.abs(kpi.gapMs));
+      if (deltaPercent > 0) {
+        insights.push(`La session dépasse la cible de ${gapLabel} (${deltaPercent.toFixed(1)} %).`);
+      } else if (deltaPercent < 0) {
+        insights.push(`La session est en avance de ${gapLabel} (${Math.abs(deltaPercent).toFixed(1)} %).`);
+      }
+    }
+    const mainPhase = [...phaseComparison].sort((a, b) => b.gapMs - a.gapMs)[0];
+    if (mainPhase && mainPhase.gapMs > 0) {
+      insights.push(`Phase prioritaire : ${mainPhase.phase} (+${formatDuration(mainPhase.gapMs)}, ${mainPhase.ratioPercent.toFixed(1)} % du ciblé).`);
+    }
+    const hotOp = criticalOps.find(item => item.hasFire) || criticalOps[0];
+    if (hotOp && hotOp.gapMs > 0) {
+      insights.push(`Opération critique : ${hotOp.opName} (${hotOp.phase}) dépasse de ${formatDuration(hotOp.gapMs)}.`);
+    }
+    const perturb = perturbateurs.find(p => p.hasWarning);
+    if (perturb && insights.length < 3) {
+      insights.push(`Perturbateur récurrent : ${perturb.label} (${perturb.count}×, ${formatDuration(perturb.totalMs)}).`);
+    }
+    if (!insights.length) {
+      insights.push('Aucune dérive notable détectée sur cette session.');
+    }
+    return insights.slice(0, 3);
+  }
+
+  function buildTooltipHTML(phase, realMs, targetMs, gapMs, gapPercent) {
+    const gapLabel = `${gapMs >= 0 ? '+' : '−'}${formatDuration(Math.abs(gapMs))}`;
+    const percentLabel = Number.isFinite(gapPercent) ? `${gapPercent >= 0 ? '+' : '−'}${Math.abs(gapPercent).toFixed(1)}%` : '—';
+    return `<strong>${escapeHtml(phase)}</strong><div>Réel : ${formatDuration(realMs)}</div><div>Cible : ${formatMinutesValue(targetMs)}</div><div>Écart : ${gapLabel} (${percentLabel})</div>`;
+  }
+
+  function renderComparisonChart(snapshots, phases) {
+    if (!els.comparisonChart || !snapshots.length) return;
+    const fallbackA = snapshots[0]?.id || '';
+    const fallbackB = snapshots[1]?.id || fallbackA;
+    if (!snapshots.some(item => item.id === runtime.comparisonA)) runtime.comparisonA = fallbackA;
+    if (!snapshots.some(item => item.id === runtime.comparisonB)) runtime.comparisonB = fallbackB;
+    const sessionA = snapshots.find(item => item.id === runtime.comparisonA);
+    const sessionB = snapshots.find(item => item.id === runtime.comparisonB);
+    if (!sessionA || !sessionB) {
+      els.comparisonChart.textContent = 'Historique insuffisant pour comparer.';
+      return;
+    }
+    const valuesA = phases.map(phase => sessionA.data.get(phase) || 0);
+    const valuesB = phases.map(phase => sessionB.data.get(phase) || 0);
+    const maxValue = Math.max(...valuesA, ...valuesB, 1);
+    const width = 420;
+    const height = 200;
+    const padding = 36;
+    const axisWidth = phases.length > 1 ? (width - padding * 2) / (phases.length - 1) : 0;
+    const points = values => values.map((value, index) => {
+      const x = padding + axisWidth * index;
+      const y = height - padding - (value / maxValue) * (height - padding * 2);
+      return { x: Number.isFinite(x) ? x : padding, y: Number.isFinite(y) ? y : height - padding };
+    });
+    const pathFromPoints = pts => pts.map((pt, idx) => `${idx === 0 ? 'M' : 'L'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
+    const ptsA = points(valuesA);
+    const ptsB = points(valuesB);
+    const pathA = pathFromPoints(ptsA);
+    const pathB = pathFromPoints(ptsB);
+    const circlesA = ptsA.map(pt => `<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="3" fill="var(--accent)" />`).join('');
+    const circlesB = ptsB.map(pt => `<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="3" fill="var(--warn)" />`).join('');
+    const axisLabels = phases.map((phase, idx) => {
+      const x = padding + axisWidth * idx;
+      return `<text x="${x.toFixed(1)}" y="${height - padding + 18}" text-anchor="middle" font-size="11">${escapeHtml(phase)}</text>`;
+    }).join('');
+    const gridLines = [0.25, 0.5, 0.75, 1].map(ratio => {
+      const y = height - padding - ratio * (height - padding * 2);
+      return `<line x1="${padding}" y1="${y.toFixed(1)}" x2="${width - padding}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,.08)" stroke-width="1" />`;
+    }).join('');
+    const svg = `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"><g fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1"><line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" /><line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" /></g>${gridLines}<path d="${pathA}" fill="none" stroke="var(--accent)" stroke-width="2" />${circlesA}<path d="${pathB}" fill="none" stroke="var(--warn)" stroke-width="2" stroke-dasharray="6 4" />${circlesB}${axisLabels}</svg>`;
+    els.comparisonChart.innerHTML = `${svg}<div class="comparison-legend"><span data-color="accent">${escapeHtml(sessionA.label)}</span><span data-color="warn">${escapeHtml(sessionB.label)}</span></div>`;
+  }
+
+  function renderAdvancedAnalysis() {
+    const metrics = collectSessionMetrics();
+    const phaseComparison = computePhaseComparison(metrics);
+    const criticalOps = computeCriticalOps(metrics);
+    const perturbateurs = computePerturbateurs(metrics);
+    const kpi = computeKPI(metrics, { phaseComparison, criticalOps });
+    const insights = generateInsights({ kpi, phaseComparison, criticalOps, perturbateurs });
+    const analysis = computeAnalysis();
+
+    const cardClass = kpi.performancePercent > 110 ? 'kpi-card--color-bad' : (kpi.performancePercent >= 100 ? 'kpi-card--color-warn' : 'kpi-card--color-good');
+    const gapLabel = formatDuration(Math.abs(kpi.gapMs));
+    const gapPercentLabel = Number.isFinite(kpi.gapPercent) ? `${kpi.gapPercent >= 0 ? '+' : '−'}${Math.abs(kpi.gapPercent).toFixed(1)}%` : '—';
+    const gapSign = kpi.gapMs >= 0 ? '+' : '−';
+    const percentLabel = value => Number.isFinite(value) ? value.toFixed(1) : '0.0';
+
+    els.kpiGrid.innerHTML = `
+      <div class="kpi-card ${cardClass}"><span>Durée vs cible</span><strong>${formatDuration(kpi.totalMs)}</strong><small>Cible : ${formatMinutesValue(kpi.targetMs)}</small><small>Écart : ${gapSign}${gapLabel} (${gapPercentLabel})</small></div>
+      <div class="kpi-card"><span>Valeur ajoutée</span><strong>${percentLabel(kpi.va.percent)}%</strong><small>${formatDuration(kpi.va.ms)}</small></div>
+      <div class="kpi-card"><span>Non valeur ajoutée</span><strong>${percentLabel(kpi.nonVa.percent)}%</strong><small>${formatDuration(kpi.nonVa.ms)}</small></div>
+      <div class="kpi-card"><span>Imprévus</span><strong>${percentLabel(kpi.imprevus.percent)}%</strong><small>${formatDuration(kpi.imprevus.ms)}</small></div>
+    `;
+
+    els.topContrib.innerHTML = kpi.topLosses.length
+      ? kpi.topLosses.map(item => `<li>${escapeHtml(item.label)} · ${formatDuration(item.gapMs)}</li>`).join('')
+      : '<li class="label-muted">Aucune perte identifiée</li>';
+
+    if (els.criticalOpsBody) {
+      if (criticalOps.length) {
+        els.criticalOpsBody.innerHTML = criticalOps.slice(0, 8).map(op => {
+          const gap = `${op.gapMs >= 0 ? '+' : '−'}${formatDuration(Math.abs(op.gapMs))}`;
+          const percent = Number.isFinite(op.gapPercent) ? `${op.gapPercent.toFixed(1)}%` : '—';
+          const note = op.details ? escapeHtml(op.details) : '<span class="label-muted">—</span>';
+          const fire = op.hasFire ? ' <span class="badge badge--fire">🔥</span>' : '';
+          return `<tr><td>${escapeHtml(op.opName)}${fire}</td><td>${escapeHtml(op.phase)}</td><td>${gap} (${percent})</td><td>${note}</td></tr>`;
+        }).join('');
+      } else {
+        els.criticalOpsBody.innerHTML = '<tr><td colspan="4" class="label-muted">Aucune opération mesurée</td></tr>';
+      }
+    }
+
+    els.perturbateurs.innerHTML = perturbateurs.length
+      ? perturbateurs.map(item => `<li><span>${escapeHtml(item.label)}</span><span>${formatDuration(item.totalMs)} · ${item.count}x${item.hasWarning ? ' <span class="badge badge--warn">⚠️</span>' : ''}</span></li>`).join('')
+      : '<li class="label-muted">Aucun perturbateur récurrent</li>';
+
+    els.insightsList.innerHTML = insights.length
+      ? insights.map(text => `<li>${escapeHtml(text)}</li>`).join('')
+      : '<li class="label-muted">Pas encore d\'insight</li>';
+
+    els.phaseDistribution.innerHTML = '';
+    if (phaseComparison.length) {
+      const maxReal = Math.max(...phaseComparison.map(item => item.realMs), 1);
+      phaseComparison.forEach(item => {
+        const width = maxReal ? (item.realMs / maxReal) * 100 : 0;
+        const row = document.createElement('div');
+        row.className = 'bar-row bar-row--enhanced';
+        row.innerHTML = `<div class="label"><span>${escapeHtml(item.phase)}</span><span>${formatDuration(item.realMs)} · ${formatMinutesValue(item.targetMs)}</span></div><div class="bar"><div class="fill ${item.colorClass}" style="width:${Math.min(100, Math.max(0, width)).toFixed(1)}%;"></div></div><div class="bar-tooltip">${buildTooltipHTML(item.phase, item.realMs, item.targetMs, item.gapMs, item.gapPercent)}</div>`;
+        els.phaseDistribution.appendChild(row);
+      });
+    } else {
+      els.phaseDistribution.innerHTML = '<div class="label-muted">Pas de phase chronométrée</div>';
+    }
+    els.phaseDistributionTarget.textContent = `Cible ${formatMinutesValue(kpi.targetMs)}`;
+
+    els.operatorDistribution.innerHTML = '';
+    if (analysis.operators.length) {
+      analysis.operators.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'bar-row';
+        row.innerHTML = `<div class="label"><span>${escapeHtml(item.operator)}</span><span>${formatDuration(item.duration)} · ${item.percent}%</span></div><div class="bar"><div class="fill" style="width:${item.percent}%"></div></div>`;
+        els.operatorDistribution.appendChild(row);
+      });
+      els.operatorDistributionTarget.textContent = `${analysis.operators.length} opérateurs`;
+    } else {
+      els.operatorDistribution.innerHTML = '<div class="label-muted">Aucune saisie opérateur</div>';
+      els.operatorDistributionTarget.textContent = '';
+    }
+
     const prepaNotesHtml = analysis.prepa.notes.length
       ? `<ul>${analysis.prepa.notes.map(note => `<li>${escapeHtml(note)}</li>`).join('')}</ul>`
       : '<span class="label-muted">Aucun commentaire</span>';
@@ -2606,6 +2978,110 @@ ${buildReportHtml()}
       <div>Temps total HC: ${formatDuration(analysis.prepa.duration)}</div>
       <div>Commentaires:<br>${prepaNotesHtml}</div>
     `;
+
+    if (els.comparisonSessionA && els.comparisonSessionB) {
+      const snapshots = buildSessionSnapshots(phaseComparison);
+      els.comparisonSessionA.innerHTML = '';
+      els.comparisonSessionB.innerHTML = '';
+      snapshots.forEach(item => {
+        const optionA = document.createElement('option');
+        optionA.value = item.id;
+        optionA.textContent = item.label;
+        els.comparisonSessionA.appendChild(optionA);
+        const optionB = document.createElement('option');
+        optionB.value = item.id;
+        optionB.textContent = item.label;
+        els.comparisonSessionB.appendChild(optionB);
+      });
+      if (!snapshots.some(item => item.id === runtime.comparisonA)) runtime.comparisonA = snapshots[0]?.id || '';
+      if (!snapshots.some(item => item.id === runtime.comparisonB)) runtime.comparisonB = snapshots[1]?.id || runtime.comparisonA;
+      els.comparisonSessionA.value = runtime.comparisonA;
+      els.comparisonSessionB.value = runtime.comparisonB;
+      renderComparisonChart(snapshots, timedPhases);
+    }
+  }
+
+  function renderAnalysis() {
+    renderAdvancedAnalysis();
+  }
+
+  function exportAdvancedReport() {
+    const metrics = collectSessionMetrics();
+    const phaseComparison = computePhaseComparison(metrics);
+    const criticalOps = computeCriticalOps(metrics);
+    const perturbateurs = computePerturbateurs(metrics);
+    const kpi = computeKPI(metrics, { phaseComparison, criticalOps });
+    const insights = generateInsights({ kpi, phaseComparison, criticalOps, perturbateurs });
+    const sessionDate = new Date(state.sessionStart).toLocaleString('fr-FR', { hour12: false });
+    const safePo = escapeHtml(state.po || '—');
+    const safeLine = escapeHtml(state.line || '—');
+    const percentLabel = value => Number.isFinite(value) ? value.toFixed(1) : '0.0';
+
+    const lossesHtml = kpi.topLosses.length
+      ? `<ol>${kpi.topLosses.map(item => `<li>${escapeHtml(item.label)} · ${formatDuration(item.gapMs)}</li>`).join('')}</ol>`
+      : '<p>Aucune perte significative.</p>';
+    const phasesRows = phaseComparison.length
+      ? phaseComparison.map(item => `<tr><td>${escapeHtml(item.phase)}</td><td>${formatDuration(item.realMs)}</td><td>${formatMinutesValue(item.targetMs)}</td><td>${item.gapMs >= 0 ? '+' : '−'}${formatDuration(Math.abs(item.gapMs))}</td></tr>`).join('')
+      : '<tr><td colspan="4">Pas de données phase.</td></tr>';
+    const opsRows = criticalOps.length
+      ? criticalOps.slice(0, 8).map(item => `<tr><td>${escapeHtml(item.opName)}</td><td>${escapeHtml(item.phase)}</td><td>${percentLabel(item.gapPercent)}%</td><td>${item.details ? escapeHtml(item.details) : '—'}</td></tr>`).join('')
+      : '<tr><td colspan="4">Aucune opération mesurée.</td></tr>';
+    const perturbHtml = perturbateurs.length
+      ? `<ul>${perturbateurs.map(p => `<li>${escapeHtml(p.label)} – ${p.count}× · ${formatDuration(p.totalMs)}</li>`).join('')}</ul>`
+      : '<p>Pas de perturbateur identifié.</p>';
+    const insightsHtml = insights.length
+      ? `<ul>${insights.map(text => `<li>${escapeHtml(text)}</li>`).join('')}</ul>`
+      : '<p>Pas encore d\'insight.</p>';
+
+    const reportHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Rapport Analyse SMED</title><style>
+      body{font-family:"Inter","Segoe UI",system-ui,sans-serif;background:#0f1a34;color:#e8eefc;margin:0;padding:32px;}
+      h1,h2{margin:0 0 12px;font-weight:600;}
+      h3{margin:24px 0 12px;font-weight:600;}
+      section{margin-bottom:28px;}
+      .kpi-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}
+      .kpi-card{background:rgba(9,18,40,.85);border-radius:16px;border:1px solid rgba(255,255,255,.12);padding:16px;font-variant-numeric:tabular-nums;}
+      .kpi-card strong{font-size:1.3rem;display:block;margin-bottom:6px;}
+      table{width:100%;border-collapse:collapse;font-size:.9rem;}
+      th,td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.12);}
+      .insights{background:rgba(255,183,3,.12);border:1px solid rgba(255,183,3,.35);border-radius:16px;padding:18px;}
+      .meta{color:rgba(232,238,252,.7);font-size:.9rem;margin-bottom:18px;}
+    </style></head><body>
+      <header>
+        <h1>Rapport Analyse SMED</h1>
+        <p class="meta">Session du ${sessionDate} · Ligne ${safeLine} · PO ${safePo}</p>
+      </header>
+      <section>
+        <div class="kpi-grid">
+          <div class="kpi-card"><strong>${formatDuration(kpi.totalMs)}</strong><div>Durée réelle</div><div>Cible ${formatMinutesValue(kpi.targetMs)}</div><div>Écart ${kpi.gapMs >= 0 ? '+' : '−'}${formatDuration(Math.abs(kpi.gapMs))}</div></div>
+          <div class="kpi-card"><strong>${percentLabel(kpi.va.percent)}%</strong><div>Valeur ajoutée</div><div>${formatDuration(kpi.va.ms)}</div></div>
+          <div class="kpi-card"><strong>${percentLabel(kpi.nonVa.percent)}%</strong><div>Non VA</div><div>${formatDuration(kpi.nonVa.ms)}</div></div>
+          <div class="kpi-card"><strong>${percentLabel(kpi.imprevus.percent)}%</strong><div>Imprévus</div><div>${formatDuration(kpi.imprevus.ms)}</div></div>
+        </div>
+      </section>
+      <section>
+        <h2>Top pertes</h2>
+        ${lossesHtml}
+      </section>
+      <section>
+        <h2>Phases – cible vs réel</h2>
+        <table><thead><tr><th>Phase</th><th>Réel</th><th>Cible</th><th>Écart</th></tr></thead><tbody>${phasesRows}</tbody></table>
+      </section>
+      <section>
+        <h2>Opérations critiques</h2>
+        <table><thead><tr><th>Opération</th><th>Phase</th><th>Écart %</th><th>Note</th></tr></thead><tbody>${opsRows}</tbody></table>
+      </section>
+      <section>
+        <h2>Perturbateurs récurrents</h2>
+        ${perturbHtml}
+      </section>
+      <section class="insights">
+        <h2>Insights Kaizen</h2>
+        ${insightsHtml}
+      </section>
+    </body></html>`;
+
+    downloadFile('SMED-rapport-analyse.html', reportHtml, 'text/html');
+    showToast('Rapport 1-page prêt ✓');
   }
 
   function buildPhaseTables() {
@@ -3390,6 +3866,21 @@ ${buildReportHtml()}
     els.saveParams.addEventListener('click', () => { saveState(true); });
     els.resetParams.addEventListener('click', () => { if (confirm('Réinitialiser toutes les phases ?')) resetState(); });
     els.refreshAnalysis.addEventListener('click', renderAnalysis);
+    if (els.exportReportAdvanced) {
+      els.exportReportAdvanced.addEventListener('click', exportAdvancedReport);
+    }
+    if (els.comparisonSessionA) {
+      els.comparisonSessionA.addEventListener('change', () => {
+        runtime.comparisonA = els.comparisonSessionA.value;
+        renderAdvancedAnalysis();
+      });
+    }
+    if (els.comparisonSessionB) {
+      els.comparisonSessionB.addEventListener('change', () => {
+        runtime.comparisonB = els.comparisonSessionB.value;
+        renderAdvancedAnalysis();
+      });
+    }
     els.alertInput.addEventListener('change', () => { state.alertMin = Number(els.alertInput.value); saveState(); updateTargets(); updateDisplay(); });
     els.suggestAlert.addEventListener('click', () => {
       const suggestion = Math.max(0, totalTargetMinutes() * 0.85);
