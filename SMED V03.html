@@ -675,6 +675,79 @@ tfoot td { font-weight:700; }
 .param-table tbody tr.dragging { opacity:.4; }
 .row-tools { display:flex; gap:8px; }
 .batch-actions { display:flex; flex-wrap:wrap; gap:10px; }
+.phase-toolbar {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+  padding:12px;
+  border-bottom:1px solid rgba(255,255,255,.05);
+  background:rgba(9,18,40,.55);
+  position:sticky;
+  top:0;
+  z-index:2;
+}
+.phase-toolbar .phase-toolbar-group {
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.phase-toolbar .phase-toolbar-group label {
+  font-size:0.85rem;
+  color:var(--muted);
+}
+.phase-toolbar select {
+  min-width:200px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(15,26,52,.85);
+}
+.phase-filter-chips {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  align-items:center;
+}
+.phase-filter-chip {
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:999px;
+  padding:6px 12px;
+  background:transparent;
+  color:inherit;
+  cursor:pointer;
+  font-size:0.85rem;
+  transition:background .2s ease, border-color .2s ease;
+}
+.phase-filter-chip.active {
+  background:var(--accent);
+  color:#021221;
+  border-color:transparent;
+}
+.phase-toolbar-toggle {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-size:0.85rem;
+  color:var(--muted);
+}
+.phase-toolbar-toggle input {
+  width:18px;
+  height:18px;
+}
+.param-table tbody tr.is-filtered {
+  display:none;
+}
+.param-table tbody tr.op-group-header-row td {
+  padding-top:16px;
+  padding-bottom:6px;
+}
+.op-group-header {
+  font-size:0.8rem;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  opacity:0.8;
+}
 .import-group {
   display:inline-flex;
   align-items:center;
@@ -1277,6 +1350,8 @@ summary { cursor:pointer; }
     shouldScrollToCurrent: false,
     quickEventMenu: null
   };
+  const phaseUiState = new Map();
+  const phaseSections = new Map();
 
   function loadState() {
     try {
@@ -1473,6 +1548,57 @@ summary { cursor:pointer; }
 
   function getCurrentOperatorName(index) {
     return state.operators[index] || `Opérateur ${index+1}`;
+  }
+
+  function getPhaseStateConfig(phase) {
+    if (!phaseUiState.has(phase)) {
+      phaseUiState.set(phase, {
+        sortMode: 'none',
+        filterOperator: null,
+        allowCrossAssign: false
+      });
+    }
+    return phaseUiState.get(phase);
+  }
+
+  function normalizeOperatorIndex(value) {
+    if (!Number.isFinite(value)) return Math.max(0, Math.min(state.operators.length - 1, state.defaultOperatorIndex || 0));
+    const normalized = Math.floor(value);
+    if (normalized < 0) return 0;
+    if (normalized >= state.operators.length) return Math.max(0, state.operators.length - 1);
+    return normalized;
+  }
+
+  function formatOperatorName(index) {
+    const normalized = normalizeOperatorIndex(index);
+    return state.operators[normalized] || `Opérateur n°${normalized + 1}`;
+  }
+
+  function stableSortByOperatorIndex(ops, asc = true) {
+    const mapped = ops.map((op, idx) => ({ op, idx }));
+    mapped.sort((a, b) => {
+      const aIdx = normalizeOperatorIndex(a.op.operatorIndex);
+      const bIdx = normalizeOperatorIndex(b.op.operatorIndex);
+      if (aIdx === bIdx) return a.idx - b.idx;
+      return asc ? aIdx - bIdx : bIdx - aIdx;
+    });
+    return mapped.map(item => item.op);
+  }
+
+  function groupByOperatorIndex(ops) {
+    const groups = new Map();
+    ops.forEach(op => {
+      const idx = normalizeOperatorIndex(op.operatorIndex);
+      if (!groups.has(idx)) groups.set(idx, []);
+      groups.get(idx).push(op);
+    });
+    return groups;
+  }
+
+  function applyPhaseFilterForOperator(ops, operatorIndex = null) {
+    if (operatorIndex == null) return ops.slice();
+    const normalized = normalizeOperatorIndex(operatorIndex);
+    return ops.filter(op => normalizeOperatorIndex(op.operatorIndex) === normalized);
   }
 
   // PATCH SMED — stats opérateur/phase
@@ -2484,6 +2610,7 @@ ${buildReportHtml()}
 
   function buildPhaseTables() {
     els.phaseTables.innerHTML = '';
+    phaseSections.clear();
     phasesList.forEach(phase => {
       const section = document.createElement('section');
       section.className = 'section-group';
@@ -2500,6 +2627,7 @@ ${buildReportHtml()}
             <button type="button" class="ghost" data-phase="${phase}" data-action="export-json">Exporter JSON</button>
           </div>
           <div class="phase-table-wrapper">
+            <div class="phase-toolbar" data-phase-toolbar></div>
             <table class="param-table" data-phase="${phase}">
               <thead>
                 <tr><th title="Inclure cette opération dans le SMED (décocher si non applicable)">Incluse ?</th><th>Opération</th><th>Temps cible (min)</th><th>Opérateur</th><th>Détails (optionnel)</th><th></th></tr>
@@ -2511,11 +2639,12 @@ ${buildReportHtml()}
         </details>
       `;
       els.phaseTables.appendChild(section);
+      const toolbar = section.querySelector('[data-phase-toolbar]');
       const tbody = section.querySelector('tbody');
       const table = section.querySelector('table');
-      (state.phases[phase] || []).forEach((operation, index) => {
-        tbody.appendChild(buildPhaseRow(phase, operation, index));
-      });
+      phaseSections.set(phase, { section, table, tbody, toolbar });
+      renderPhaseToolbar(phase);
+      renderPhaseTableBody(phase);
       updatePhaseTotal(table, phase);
       section.addEventListener('change', handlePhaseInputChange);
       section.querySelectorAll('button[data-phase]').forEach(btn => btn.addEventListener('click', handlePhaseAction));
@@ -2525,12 +2654,174 @@ ${buildReportHtml()}
     });
   }
 
+  function renderPhaseToolbar(phase) {
+    const refs = phaseSections.get(phase);
+    if (!refs || !refs.toolbar) return;
+    const toolbar = refs.toolbar;
+    const config = getPhaseStateConfig(phase);
+    const ops = state.phases[phase] || [];
+    const disabled = ops.length === 0;
+    toolbar.innerHTML = '';
+
+    const sortGroup = document.createElement('div');
+    sortGroup.className = 'phase-toolbar-group';
+    const sortLabel = document.createElement('span');
+    sortLabel.textContent = 'Trier';
+    sortGroup.appendChild(sortLabel);
+    const sortSelect = document.createElement('select');
+    sortSelect.setAttribute('aria-label', 'Trier les opérations de la phase par opérateur');
+    sortSelect.innerHTML = [
+      { value: 'none', label: 'Aucun' },
+      { value: 'op-asc', label: 'Opérateur A→Z' },
+      { value: 'op-desc', label: 'Opérateur Z→A' },
+      { value: 'group', label: 'Regrouper par opérateur' }
+    ].map(option => `<option value="${option.value}">${option.label}</option>`).join('');
+    sortSelect.value = config.sortMode;
+    sortSelect.disabled = disabled;
+    sortSelect.addEventListener('change', event => {
+      config.sortMode = event.target.value;
+      if (config.sortMode !== 'group') {
+        config.allowCrossAssign = false;
+      }
+      refreshPhaseTable(phase);
+    });
+    sortGroup.appendChild(sortSelect);
+    toolbar.appendChild(sortGroup);
+
+    const filterWrapper = document.createElement('div');
+    filterWrapper.className = 'phase-toolbar-group';
+    const filterLabel = document.createElement('span');
+    filterLabel.textContent = 'Filtrer';
+    filterWrapper.appendChild(filterLabel);
+    const chips = document.createElement('div');
+    chips.className = 'phase-filter-chips';
+    const allChip = document.createElement('button');
+    allChip.type = 'button';
+    allChip.className = `phase-filter-chip${config.filterOperator == null ? ' active' : ''}`;
+    allChip.textContent = 'Tous';
+    allChip.disabled = disabled;
+    allChip.addEventListener('click', () => {
+      if (config.filterOperator == null) return;
+      config.filterOperator = null;
+      refreshPhaseTable(phase);
+    });
+    chips.appendChild(allChip);
+    state.operators.forEach((op, idx) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = `phase-filter-chip${config.filterOperator != null && normalizeOperatorIndex(config.filterOperator) === normalizeOperatorIndex(idx) ? ' active' : ''}`;
+      chip.textContent = op || `Opérateur n°${idx + 1}`;
+      chip.disabled = disabled;
+      chip.addEventListener('click', () => {
+        const normalized = normalizeOperatorIndex(idx);
+        if (config.filterOperator != null && normalizeOperatorIndex(config.filterOperator) === normalized) {
+          config.filterOperator = null;
+        } else {
+          config.filterOperator = normalized;
+        }
+        refreshPhaseTable(phase);
+      });
+      chips.appendChild(chip);
+    });
+    filterWrapper.appendChild(chips);
+    toolbar.appendChild(filterWrapper);
+
+    const toggleLabel = document.createElement('label');
+    toggleLabel.className = 'phase-toolbar-toggle';
+    const toggleInput = document.createElement('input');
+    toggleInput.type = 'checkbox';
+    toggleInput.checked = !!config.allowCrossAssign;
+    toggleInput.disabled = disabled || config.sortMode !== 'group';
+    toggleInput.setAttribute('aria-label', 'Autoriser le déplacement entre opérateurs (réassignation)');
+    toggleInput.addEventListener('change', event => {
+      config.allowCrossAssign = event.target.checked;
+      refreshPhaseTable(phase);
+    });
+    toggleLabel.appendChild(toggleInput);
+    const toggleText = document.createElement('span');
+    toggleText.textContent = 'Autoriser les déplacements entre opérateurs (réassigne)';
+    toggleLabel.appendChild(toggleText);
+    toolbar.appendChild(toggleLabel);
+  }
+
+  function renderPhaseTableBody(phase) {
+    const refs = phaseSections.get(phase);
+    if (!refs) return;
+    const tbody = refs.tbody;
+    const table = refs.table;
+    if (!tbody || !table) return;
+    const config = getPhaseStateConfig(phase);
+    const operations = (state.phases[phase] || []).slice();
+    let ordered = operations.slice();
+    if (config.sortMode === 'op-asc') {
+      ordered = stableSortByOperatorIndex(operations, true);
+    } else if (config.sortMode === 'op-desc') {
+      ordered = stableSortByOperatorIndex(operations, false);
+    } else if (config.sortMode === 'group') {
+      ordered = stableSortByOperatorIndex(operations, true);
+    }
+    ordered.forEach(operation => {
+      if (!operation.id) operation.id = newId();
+    });
+    const filterIndex = config.filterOperator == null ? null : normalizeOperatorIndex(config.filterOperator);
+    const visibleOps = new Set(applyPhaseFilterForOperator(ordered, filterIndex).map(op => op.id));
+    tbody.innerHTML = '';
+    table.dataset.sortMode = config.sortMode;
+    if (!ordered.length) {
+      return;
+    }
+    if (config.sortMode === 'group') {
+      const groups = groupByOperatorIndex(ordered);
+      groups.forEach((items, operatorIndex) => {
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'op-group-header-row';
+        headerRow.dataset.kind = 'group-header';
+        headerRow.dataset.operatorIndex = operatorIndex;
+        const cell = document.createElement('td');
+        cell.colSpan = 6;
+        cell.className = 'op-group-header';
+        cell.setAttribute('role', 'rowheader');
+        cell.textContent = `Opérateur : ${formatOperatorName(operatorIndex)}`;
+        headerRow.appendChild(cell);
+        if (filterIndex != null && filterIndex !== normalizeOperatorIndex(operatorIndex)) {
+          headerRow.classList.add('is-filtered');
+        }
+        tbody.appendChild(headerRow);
+        items.forEach(operation => {
+          const row = buildPhaseRow(phase, operation);
+          if (!visibleOps.has(operation.id)) {
+            row.classList.add('is-filtered');
+          }
+          tbody.appendChild(row);
+        });
+      });
+    } else {
+      ordered.forEach(operation => {
+        const row = buildPhaseRow(phase, operation);
+        if (!visibleOps.has(operation.id)) {
+          row.classList.add('is-filtered');
+        }
+        tbody.appendChild(row);
+      });
+    }
+  }
+
+  function refreshPhaseTable(phase) {
+    const refs = phaseSections.get(phase);
+    if (!refs) return;
+    renderPhaseToolbar(phase);
+    renderPhaseTableBody(phase);
+    updatePhaseTotal(refs.table, phase);
+  }
+
   function buildPhaseRow(phase, operation, index) {
     const tr = document.createElement('tr');
     tr.draggable = true;
     const opId = operation.id || newId();
     operation.id = opId;
     tr.dataset.id = opId;
+    tr.dataset.kind = 'operation';
+    tr.dataset.operatorIndex = normalizeOperatorIndex(operation.operatorIndex);
     const enabled = operation.enabled !== false;
     operation.enabled = enabled;
     tr.innerHTML = `
@@ -2544,8 +2835,10 @@ ${buildReportHtml()}
     const select = tr.querySelector('select');
     populateOperatorSelect(select, operation.operatorIndex);
     tr.querySelector('[data-action="delete"]').addEventListener('click', () => {
-      const idx = Array.from(tr.parentElement.children).indexOf(tr);
-      state.phases[phase].splice(idx,1);
+      const idx = state.phases[phase].findIndex(item => item.id === opId);
+      if (idx >= 0) {
+        state.phases[phase].splice(idx,1);
+      }
       saveState(true);
       buildPhaseTables();
       renderOperatorColumns();
@@ -2572,9 +2865,11 @@ ${buildReportHtml()}
     const row = input.closest('tr');
     if (!row) return;
     const phase = input.closest('table').dataset.phase;
-    const idx = Array.from(row.parentElement.children).indexOf(row);
     const field = input.dataset.field;
-    if (!field) return;
+    const opId = row.dataset.id;
+    if (!field || !opId) return;
+    const idx = state.phases[phase].findIndex(item => item.id === opId);
+    if (idx < 0) return;
     if (field === 'enabled') {
       state.phases[phase][idx].enabled = input.checked;
       saveState();
@@ -2592,6 +2887,23 @@ ${buildReportHtml()}
       const numeric = Number(input.value);
       if (field === 'operatorIndex') {
         state.phases[phase][idx][field] = Number.isFinite(numeric) ? numeric : state.defaultOperatorIndex;
+        row.dataset.operatorIndex = normalizeOperatorIndex(state.phases[phase][idx][field]);
+        saveState();
+        updatePhaseTotal(input.closest('table'), phase);
+        updateTargets();
+        renderOperatorColumns();
+        updateAnalysisDelayed();
+        const selectionStart = typeof input.selectionStart === 'number' ? input.selectionStart : null;
+        const selectionEnd = typeof input.selectionEnd === 'number' ? input.selectionEnd : null;
+        refreshPhaseTable(phase);
+        const refreshedInput = els.phaseTables.querySelector(`tr[data-id="${opId}"] [data-field="operatorIndex"]`);
+        if (refreshedInput) {
+          refreshedInput.focus({ preventScroll: true });
+          if (selectionStart != null && selectionEnd != null && refreshedInput.setSelectionRange) {
+            refreshedInput.setSelectionRange(selectionStart, selectionEnd);
+          }
+        }
+        return;
       } else {
         state.phases[phase][idx][field] = Number.isFinite(numeric) ? numeric : 0;
       }
@@ -2625,8 +2937,12 @@ ${buildReportHtml()}
       const idx = Number(operator) - 1;
       if (!Number.isInteger(idx) || idx < 0 || idx > 3) return;
       selected.forEach(row => {
-        const rowIndex = Array.from(row.parentElement.children).indexOf(row);
-        state.phases[phase][rowIndex].operatorIndex = idx;
+        const opId = row.dataset.id;
+        if (!opId) return;
+        const rowIndex = state.phases[phase].findIndex(op => op.id === opId);
+        if (rowIndex >= 0) {
+          state.phases[phase][rowIndex].operatorIndex = idx;
+        }
       });
       saveState();
       buildPhaseTables();
@@ -2636,8 +2952,12 @@ ${buildReportHtml()}
       const value = Number(prompt('Temps cible (min) :', 1));
       if (!Number.isFinite(value)) return;
       selected.forEach(row => {
-        const rowIndex = Array.from(row.parentElement.children).indexOf(row);
-        state.phases[phase][rowIndex].targetMin = value;
+        const opId = row.dataset.id;
+        if (!opId) return;
+        const rowIndex = state.phases[phase].findIndex(op => op.id === opId);
+        if (rowIndex >= 0) {
+          state.phases[phase][rowIndex].targetMin = value;
+        }
       });
       saveState();
       buildPhaseTables();
@@ -2718,48 +3038,160 @@ ${buildReportHtml()}
   }
 
   function enableDragAndDrop(tbody, phase) {
-    let dragged;
+    let dragged = null;
+    let initialOrder = [];
+
+    const getGroupAnchors = operatorIndex => {
+      const normalized = normalizeOperatorIndex(Number(operatorIndex));
+      const headers = Array.from(tbody.querySelectorAll('tr[data-kind="group-header"]')).filter(row => !row.classList.contains('is-filtered'));
+      const header = headers.find(row => normalizeOperatorIndex(Number(row.dataset.operatorIndex)) === normalized) || null;
+      let nextHeader = null;
+      if (header) {
+        let sibling = header.nextElementSibling;
+        while (sibling) {
+          if (sibling.dataset.kind === 'group-header') {
+            nextHeader = sibling;
+            break;
+          }
+          sibling = sibling.nextElementSibling;
+        }
+      }
+      return { header, nextHeader };
+    };
+
     tbody.addEventListener('dragstart', event => {
-      dragged = event.target;
-      dragged.classList.add('dragging');
+      const row = event.target.closest('tr[data-kind="operation"]');
+      if (!row) return;
+      dragged = row;
+      initialOrder = state.phases[phase].map(op => op.id);
+      row.classList.add('dragging');
       event.dataTransfer.effectAllowed = 'move';
     });
-    tbody.addEventListener('dragend', event => {
-      event.target.classList.remove('dragging');
+
+    tbody.addEventListener('dragend', () => {
+      if (dragged) {
+        dragged.classList.remove('dragging');
+      }
       dragged = null;
+      initialOrder = [];
     });
+
     tbody.addEventListener('dragover', event => {
+      if (!dragged) return;
+      const config = getPhaseStateConfig(phase);
+      const draggedOperator = normalizeOperatorIndex(Number(dragged.dataset.operatorIndex));
+      if (config.sortMode === 'group' && !config.allowCrossAssign) {
+        const { header, nextHeader } = getGroupAnchors(draggedOperator);
+        const pointerY = event.clientY;
+        const boundsTop = header ? header.getBoundingClientRect().bottom : tbody.getBoundingClientRect().top;
+        const boundsBottom = nextHeader ? nextHeader.getBoundingClientRect().top : tbody.getBoundingClientRect().bottom;
+        if (pointerY < boundsTop || pointerY > boundsBottom) {
+          event.dataTransfer.dropEffect = 'none';
+          return;
+        }
+        const targetRow = event.target.closest('tr');
+        if (targetRow) {
+          const kind = targetRow.dataset.kind;
+          const targetOperator = normalizeOperatorIndex(Number(targetRow.dataset.operatorIndex));
+          if ((kind === 'operation' || kind === 'group-header') && targetOperator !== draggedOperator) {
+            event.dataTransfer.dropEffect = 'none';
+            return;
+          }
+        }
+      }
+      let selector = 'tr[data-kind="operation"]:not(.dragging):not(.is-filtered)';
+      if (config.sortMode === 'group' && !config.allowCrossAssign) {
+        selector += `[data-operator-index="${draggedOperator}"]`;
+      }
+      const after = getDragAfterElement(tbody, event.clientY, selector);
       event.preventDefault();
-      const after = getDragAfterElement(tbody, event.clientY);
+      event.dataTransfer.dropEffect = 'move';
       if (!after) {
-        tbody.appendChild(dragged);
+        if (config.sortMode === 'group' && !config.allowCrossAssign) {
+          const { nextHeader } = getGroupAnchors(draggedOperator);
+          if (nextHeader) {
+            tbody.insertBefore(dragged, nextHeader);
+          } else {
+            tbody.appendChild(dragged);
+          }
+        } else {
+          tbody.appendChild(dragged);
+        }
       } else {
         tbody.insertBefore(dragged, after);
       }
     });
-    tbody.addEventListener('drop', () => {
-      const rows = Array.from(tbody.querySelectorAll('tr'));
-      state.phases[phase] = rows.map(row => {
-        const enabledInput = row.querySelector('input[data-field="enabled"]');
-        const detailsInput = row.querySelector('[data-field="details"]');
+
+    tbody.addEventListener('drop', event => {
+      if (!dragged) return;
+      event.preventDefault();
+      const draggedId = dragged.dataset.id;
+      const config = getPhaseStateConfig(phase);
+      const allowCrossAssign = config.sortMode === 'group' && config.allowCrossAssign;
+      const previousIndices = new Map(state.phases[phase].map(op => [op.id, normalizeOperatorIndex(op.operatorIndex)]));
+      const orderElements = [];
+      let currentOperator = null;
+      Array.from(tbody.children).forEach(child => {
+        if (child.dataset.kind === 'group-header') {
+          currentOperator = normalizeOperatorIndex(Number(child.dataset.operatorIndex));
+        } else if (child.dataset.kind === 'operation') {
+          let effectiveOperator = normalizeOperatorIndex(Number(child.dataset.operatorIndex));
+          if (config.sortMode === 'group' && currentOperator != null) {
+            if (allowCrossAssign) {
+              effectiveOperator = currentOperator;
+            }
+          }
+          orderElements.push({ element: child, operatorIndex: effectiveOperator });
+        }
+      });
+      let reassigned = false;
+      const newState = orderElements.map(({ element, operatorIndex }) => {
+        const normalizedOperator = normalizeOperatorIndex(operatorIndex);
+        const previousOperator = previousIndices.get(element.dataset.id);
+        if (allowCrossAssign && previousOperator != null && previousOperator !== normalizedOperator) {
+          reassigned = true;
+        }
+        element.dataset.operatorIndex = normalizedOperator;
+        const select = element.querySelector('select[data-field="operatorIndex"]');
+        if (select && select.value !== String(normalizedOperator)) {
+          select.value = normalizedOperator;
+        }
+        const enabledInput = element.querySelector('input[data-field="enabled"]');
+        const detailsInput = element.querySelector('[data-field="details"]');
         return {
-          id: row.dataset.id || newId(),
-          name: row.querySelector('input[data-field="name"]').value,
-          targetMin: Number(row.querySelector('input[data-field="targetMin"]').value) || 0,
-          operatorIndex: Number(row.querySelector('select[data-field="operatorIndex"]').value),
+          id: element.dataset.id || newId(),
+          name: element.querySelector('input[data-field="name"]').value,
+          targetMin: Number(element.querySelector('input[data-field="targetMin"]').value) || 0,
+          operatorIndex: normalizedOperator,
           enabled: enabledInput ? enabledInput.checked : true,
           details: detailsInput ? detailsInput.value : ''
         };
       });
+      const newOrderIds = newState.map(op => op.id);
+      const reordered = newOrderIds.length === initialOrder.length && newOrderIds.some((id, idx) => id !== initialOrder[idx]);
+      dragged.classList.remove('dragging');
+      dragged = null;
+      initialOrder = [];
+      state.phases[phase] = newState;
       saveState();
       renderOperatorColumns();
       updateTargets();
       updateAnalysisDelayed();
+      refreshPhaseTable(phase);
+      if (reassigned) {
+        const moved = newState.find(op => op.id === draggedId);
+        const targetName = moved ? formatOperatorName(moved.operatorIndex) : formatOperatorName(state.defaultOperatorIndex);
+        showToast(`Opération réassignée à ${targetName} ✓`);
+      }
+      if (reordered) {
+        showToast('Ordre mis à jour ✓');
+      }
     });
   }
 
-  function getDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('tr:not(.dragging)')];
+  function getDragAfterElement(container, y, selector = 'tr[data-kind="operation"]:not(.dragging):not(.is-filtered)') {
+    const draggableElements = [...container.querySelectorAll(selector)];
+    if (!draggableElements.length) return null;
     return draggableElements.reduce((closest, child) => {
       const box = child.getBoundingClientRect();
       const offset = y - box.top - box.height / 2;
@@ -2768,7 +3200,7 @@ ${buildReportHtml()}
       } else {
         return closest;
       }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
   }
 
   function buildDefaultsForm() {
