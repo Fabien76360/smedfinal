@@ -1581,6 +1581,7 @@ summary { cursor:pointer; }
         dot.className = 'dot';
         status.replaceChildren(dot);
       }
+      updateRunningOpTime(currentOpStartMs);
     } else {
       status.replaceChildren();
     }
@@ -1588,6 +1589,16 @@ summary { cursor:pointer; }
 
   function unmarkOpUI(opId){
     markOpUI(opId, false);
+  }
+
+  function updateRunningOpTime(now){
+    if (currentOpId === null || currentOpStartMs === null) return;
+    const timeEl = document.querySelector(`.op-chip[data-op-id="${currentOpId}"] .time`);
+    if (!timeEl) return;
+    const base = opTotals.get(currentOpId) || 0;
+    const current = typeof now === 'number' ? now : nowMs();
+    const elapsed = Math.max(0, current - currentOpStartMs);
+    timeEl.textContent = formatMs(base + elapsed);
   }
 
   function refreshOpChip(opId){
@@ -1617,17 +1628,20 @@ summary { cursor:pointer; }
     currentOpLabel = label || getOperationById(opId)?.name || '';
     runtime.shouldScrollToCurrent = true;
     markOpUI(opId, true);
+    requestTick();
   }
 
   function stopCurrentOp(){
     if (currentOpId === null) return;
     const end = nowMs();
     const start = currentOpStartMs;
-    if (typeof start !== 'number'){ cleanupCurrentOp(); return; }
+    if (typeof start !== 'number'){ cleanupCurrentOp(); requestTick(); return; }
     const elapsed = end - start;
     if (elapsed < 800){
       unmarkOpUI(currentOpId);
+      refreshOpChip(currentOpId);
       cleanupCurrentOp();
+      requestTick();
       return;
     }
     const phaseId = currentOpPhaseId || getCurrentPhaseId();
@@ -1672,6 +1686,7 @@ summary { cursor:pointer; }
     renderOperatorColumns();
     updateAnalysisDelayed();
     cleanupCurrentOp();
+    requestTick();
   }
 
   function cleanupCurrentOp(){
@@ -2132,7 +2147,7 @@ summary { cursor:pointer; }
 
   function requestTick() {
     cancelAnimationFrame(runtime.animationFrame);
-    if (state.runningSince) {
+    if (state.runningSince || currentOpId !== null) {
       runtime.animationFrame = requestAnimationFrame(tick);
     }
   }
@@ -2141,6 +2156,11 @@ summary { cursor:pointer; }
     runtime.lastTick = now;
     if (state.runningSince) {
       updateDisplay();
+    }
+    if (currentOpId !== null) {
+      updateRunningOpTime(now);
+    }
+    if (state.runningSince || currentOpId !== null) {
       runtime.animationFrame = requestAnimationFrame(tick);
     }
   }
@@ -3069,7 +3089,7 @@ ${buildReportHtml()}
         }
       }
     }
-    if (state.runningSince) {
+    if (state.runningSince || currentOpId !== null) {
       requestTick();
     } else {
       cancelAnimationFrame(runtime.animationFrame);
