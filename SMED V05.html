@@ -854,6 +854,17 @@ summary { cursor:pointer; }
   align-items:center;
   gap:8px;
 }
+.pill-chrono{
+  font-size:0.8rem;
+  letter-spacing:0.06em;
+  font-variant-numeric:tabular-nums;
+  color:var(--muted);
+  min-width:52px;
+  text-align:right;
+}
+.op-pill.current .pill-chrono{
+  color:var(--accent);
+}
 .op-pill .note-btn,
 .pill-actions .pill-action{
   display:inline-flex;
@@ -1037,6 +1048,15 @@ summary { cursor:pointer; }
 .badge.time-warn{ color:var(--warn); }
 .badge.time-bad{ color:var(--danger); }
 .ops-toolbar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.ops-toolbar .ghost.active{
+  border-color:var(--accent);
+  color:var(--accent);
+}
+.ops-toolbar .phase-btn.success{
+  border-color:rgba(61,220,151,.55);
+  background:rgba(61,220,151,.12);
+  color:var(--accent);
+}
 /* PATCH op-event */
 .op-evt-btn{
   display:inline-flex; align-items:center; gap:8px;
@@ -1125,6 +1145,8 @@ summary { cursor:pointer; }
             <div id="opsToolbar" class="ops-toolbar" aria-label="Outils affichage opérations">
               <!-- PATCH rm-toggle: suppression du toggle "Montrer seulement la courante" -->
               <button id="undoLast" type="button" class="ghost">↺ Annuler dernière</button>
+              <button id="toggleSubChrono" type="button" class="ghost" aria-pressed="false"><span class="icon">⏱</span>Chrono pastilles inactif</button>
+              <button id="validatePhase" type="button" class="ghost phase-btn" disabled>Phase incomplète</button>
               <span id="hcMini" class="badge" style="display:none;"></span>
             </div>
             <div class="ops-columns" id="opsPhaseChips"></div>
@@ -1330,7 +1352,9 @@ summary { cursor:pointer; }
     runningSince: null,
     sessionElapsedMs: 0,
     completedOpsByOp: {},
-    multiViewOverride: null
+    multiViewOverride: null,
+    subOpChronoEnabled: false,
+    phaseValidation: {}
   });
 
   const els = {
@@ -1358,6 +1382,8 @@ summary { cursor:pointer; }
     brandLine: document.getElementById('brandLine'),
     phaseChips: document.getElementById('phaseChips'),
     opsPhaseChips: document.getElementById('opsPhaseChips'),
+    toggleSubChrono: document.getElementById('toggleSubChrono'),
+    validatePhase: document.getElementById('validatePhase'),
     saveParams: document.getElementById('saveParams'),
     resetParams: document.getElementById('resetParams'),
     refreshAnalysis: document.getElementById('refreshAnalysis'),
@@ -1402,7 +1428,8 @@ summary { cursor:pointer; }
     shouldScrollToCurrent: false,
     quickEventMenu: null,
     comparisonA: 'current',
-    comparisonB: 'target'
+    comparisonB: 'target',
+    subOpChronos: new Map()
   };
   const phaseUiState = new Map();
   const phaseSections = new Map();
@@ -1453,6 +1480,8 @@ summary { cursor:pointer; }
       : [];
     // PATCH SMED — affichage courant only
     merged._onlyCurrent = !!merged._onlyCurrent;
+    merged.subOpChronoEnabled = !!merged.subOpChronoEnabled;
+    merged.phaseValidation = merged.phaseValidation && typeof merged.phaseValidation === 'object' ? merged.phaseValidation : {};
     Object.keys(merged.completedOpsByOp).forEach(op => {
       const phases = typeof merged.completedOpsByOp[op] === 'object' && merged.completedOpsByOp[op] ? merged.completedOpsByOp[op] : {};
       Object.keys(phases).forEach(ph => {
@@ -1605,6 +1634,149 @@ summary { cursor:pointer; }
     }
   }
 
+  function ensurePhaseValidationStructure() {
+    if (!state.phaseValidation || typeof state.phaseValidation !== 'object') {
+      state.phaseValidation = {};
+    }
+  }
+
+  function formatSubOpDuration(ms) {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const minutes = String(Math.floor(total / 60)).padStart(2, '0');
+    const seconds = String(total % 60).padStart(2, '0');
+    return `${minutes}:${seconds}`;
+  }
+
+  function startSubOpTimer(operatorIndex, opId) {
+    if (!state.subOpChronoEnabled || !opId) return;
+    const key = String(operatorIndex);
+    const current = runtime.subOpChronos.get(key);
+    if (current && current.opId === opId) return;
+    runtime.subOpChronos.set(key, { opId, startedAt: getSessionElapsed() });
+    requestTick();
+  }
+
+  function stopSubOpTimer(operatorIndex, opId) {
+    const key = String(operatorIndex);
+    const current = runtime.subOpChronos.get(key);
+    if (!current) return;
+    if (opId && current.opId !== opId) return;
+    runtime.subOpChronos.delete(key);
+  }
+
+  function clearSubOpTimers() {
+    runtime.subOpChronos.clear();
+    updateSubOpChronoDisplays();
+    requestTick();
+  }
+
+  function updateSubOpChronoDisplays() {
+    if (!state.subOpChronoEnabled || !els.opsPhaseChips) return;
+    const nowElapsed = getSessionElapsed();
+    els.opsPhaseChips.querySelectorAll('.op-pill').forEach(pill => {
+      const chrono = pill.querySelector('.pill-chrono');
+      if (!chrono) return;
+      const operatorIndex = Number(pill.dataset.operatorIndex);
+      const opId = pill.dataset.operationId;
+      const info = runtime.subOpChronos.get(String(operatorIndex));
+      if (pill.classList.contains('current') && info && info.opId === opId) {
+        chrono.textContent = formatSubOpDuration(nowElapsed - info.startedAt);
+      } else {
+        chrono.textContent = '—';
+      }
+    });
+  }
+
+  function updateSubChronoToggle() {
+    if (!els.toggleSubChrono) return;
+    els.toggleSubChrono.setAttribute('aria-pressed', state.subOpChronoEnabled ? 'true' : 'false');
+    els.toggleSubChrono.classList.toggle('active', state.subOpChronoEnabled);
+    els.toggleSubChrono.innerHTML = `<span class="icon">⏱</span>${state.subOpChronoEnabled ? 'Chrono pastilles actif' : 'Chrono pastilles inactif'}`;
+  }
+
+  function toggleSubOpChrono() {
+    state.subOpChronoEnabled = !state.subOpChronoEnabled;
+    if (!state.subOpChronoEnabled) {
+      clearSubOpTimers();
+    } else {
+      runtime.shouldScrollToCurrent = true;
+    }
+    saveState();
+    renderOperatorColumns();
+    updateSubChronoToggle();
+    updateSubOpChronoDisplays();
+    showToast(state.subOpChronoEnabled ? 'Chrono pastilles activé' : 'Chrono pastilles désactivé', 'info');
+  }
+
+  function isOperationCompleted(phase, operation) {
+    ensureCompletedStructures();
+    if (!operation.id) operation.id = newId();
+    const assignedIndex = typeof operation.operatorIndex === 'number' ? operation.operatorIndex : state.defaultOperatorIndex;
+    const operatorName = getCurrentOperatorName(assignedIndex);
+    const set = state.completedOpsByOp[operatorName] && state.completedOpsByOp[operatorName][phase];
+    return !!(set && set.has(operation.id));
+  }
+
+  function isPhaseFullyComplete(phase) {
+    const ops = (state.phases[phase] || []).filter(op => op && op.enabled !== false);
+    if (!ops.length) return false;
+    return ops.every(op => isOperationCompleted(phase, op));
+  }
+
+  function updatePhaseValidationButton() {
+    ensurePhaseValidationStructure();
+    if (!els.validatePhase) return;
+    const phase = state.activePhase;
+    let isValidated = !!state.phaseValidation[phase];
+    const ready = isPhaseFullyComplete(phase);
+    if (isValidated && !ready) {
+      delete state.phaseValidation[phase];
+      isValidated = false;
+      saveState();
+    }
+    els.validatePhase.dataset.phase = phase;
+    els.validatePhase.classList.toggle('success', isValidated);
+    if (isValidated) {
+      els.validatePhase.disabled = true;
+      els.validatePhase.textContent = 'Phase validée ✓';
+    } else if (ready) {
+      els.validatePhase.disabled = false;
+      els.validatePhase.textContent = 'Valider la phase';
+    } else {
+      els.validatePhase.disabled = true;
+      els.validatePhase.textContent = 'Phase incomplète';
+    }
+  }
+
+  function handlePhaseValidation() {
+    ensurePhaseValidationStructure();
+    const phase = state.activePhase;
+    if (state.phaseValidation[phase]) {
+      showToast('Phase déjà validée', 'info');
+      return;
+    }
+    if (!isPhaseFullyComplete(phase)) {
+      showToast('Complétez toutes les opérations avant de valider', 'info');
+      return;
+    }
+    state.phaseValidation[phase] = true;
+    state.marks.push({
+      t: getSessionElapsed(),
+      phase,
+      operator: '',
+      label: `Phase ${phase} validée`,
+      kind: 'event',
+      note: '',
+      hc: phase === 'Activité CHGT de PO',
+      durationMs: 0
+    });
+    saveState();
+    renderLog();
+    updatePhaseValidationButton();
+    updateAnalysisDelayed();
+    showToast(`Phase "${phase}" validée ✓`);
+  }
+
   function getCurrentOperatorName(index) {
     return state.operators[index] || `Opérateur ${index+1}`;
   }
@@ -1734,8 +1906,14 @@ summary { cursor:pointer; }
       runtime.focusedOperator = state.defaultOperatorIndex;
     }
     state.operators.forEach((op, idx) => {
-      if (!state.multiView && idx !== state.defaultOperatorIndex) return;
-      if (!op && idx !== state.defaultOperatorIndex) return;
+      if (!state.multiView && idx !== state.defaultOperatorIndex) {
+        stopSubOpTimer(idx);
+        return;
+      }
+      if (!op && idx !== state.defaultOperatorIndex) {
+        stopSubOpTimer(idx);
+        return;
+      }
 
       const operatorName = getCurrentOperatorName(idx);
 
@@ -1821,6 +1999,8 @@ summary { cursor:pointer; }
         pill.type = 'button';
         pill.className = 'op-pill';
         if (isDone) pill.classList.add('done');
+        pill.dataset.operatorIndex = idx;
+        pill.dataset.operationId = operation.id;
         const indexSpan = document.createElement('span');
         indexSpan.className = 'index';
         indexSpan.textContent = opIndex + 1;
@@ -1831,6 +2011,12 @@ summary { cursor:pointer; }
         checkSpan.textContent = '✔';
         const actionsWrap = document.createElement('div');
         actionsWrap.className = 'pill-actions';
+        if (state.subOpChronoEnabled && !isDone) {
+          const chrono = document.createElement('span');
+          chrono.className = 'pill-chrono';
+          chrono.textContent = '—';
+          actionsWrap.appendChild(chrono);
+        }
         const noteBtn = document.createElement('button');
         noteBtn.type = 'button';
         noteBtn.className = 'note-btn';
@@ -1886,7 +2072,7 @@ summary { cursor:pointer; }
         return { wrapper, pill };
       };
 
-      if (doneOps.length) {
+      if (doneOps.length && !state.subOpChronoEnabled) {
         const doneDetails = document.createElement('details');
         doneDetails.className = 'done-group';
         const summary = document.createElement('summary');
@@ -1904,31 +2090,55 @@ summary { cursor:pointer; }
       const list = document.createElement('div');
       list.className = 'op-list';
       let firstPending = true;
+      let firstPendingOp = null;
 
       todoOps.forEach(({ operation, opIndex }) => {
         const { wrapper, pill } = buildPill(operation, opIndex, false);
         if (firstPending) {
           pill.classList.add('current');
           firstPending = false;
+          firstPendingOp = operation;
         }
         list.appendChild(wrapper);
       });
 
-      if (!phaseOps.length) {
+      if (!list.childElementCount) {
         const empty = document.createElement('div');
         empty.className = 'label-muted';
-        empty.textContent = 'Aucune opération';
+        if (!phaseOps.length) {
+          empty.textContent = 'Aucune opération';
+        } else if (!todoOps.length) {
+          empty.textContent = state.subOpChronoEnabled ? 'Toutes les opérations réalisées' : 'Aucune opération en cours';
+        } else {
+          empty.textContent = 'Aucune opération';
+        }
         list.appendChild(empty);
       }
 
       card.appendChild(list);
       col.appendChild(card);
       els.opsPhaseChips.appendChild(col);
+
+      if (state.subOpChronoEnabled) {
+        if (firstPendingOp) {
+          startSubOpTimer(idx, firstPendingOp.id);
+        } else {
+          stopSubOpTimer(idx);
+        }
+      } else {
+        stopSubOpTimer(idx);
+      }
     });
     if (runtime.shouldScrollToCurrent) {
       runtime.shouldScrollToCurrent = false;
       requestAnimationFrame(scrollCurrentOperationIntoView);
     }
+    updateSubChronoToggle();
+    updatePhaseValidationButton();
+    if (state.subOpChronoEnabled) {
+      updateSubOpChronoDisplays();
+    }
+    requestTick();
   }
 
   function scrollCurrentOperationIntoView() {
@@ -2117,9 +2327,13 @@ summary { cursor:pointer; }
     showToast('Chrono démarré');
   }
 
+  function shouldContinueTicking() {
+    return !!(state.runningSince || (state.subOpChronoEnabled && runtime.subOpChronos.size > 0));
+  }
+
   function requestTick() {
     cancelAnimationFrame(runtime.animationFrame);
-    if (state.runningSince) {
+    if (shouldContinueTicking()) {
       runtime.animationFrame = requestAnimationFrame(tick);
     }
   }
@@ -2128,6 +2342,11 @@ summary { cursor:pointer; }
     runtime.lastTick = now;
     if (state.runningSince) {
       updateDisplay();
+    }
+    if (state.subOpChronoEnabled) {
+      updateSubOpChronoDisplays();
+    }
+    if (shouldContinueTicking()) {
       runtime.animationFrame = requestAnimationFrame(tick);
     }
   }
@@ -3755,6 +3974,11 @@ ${buildReportHtml()}
     updateBrandLine();
     renderPhaseChips();
     renderOperatorColumns();
+    updateSubChronoToggle();
+    updatePhaseValidationButton();
+    if (state.subOpChronoEnabled) {
+      updateSubOpChronoDisplays();
+    }
     updateTargets();
     updateDisplay();
     renderLog();
@@ -3840,6 +4064,7 @@ ${buildReportHtml()}
 
       // 3) Repartir en Prépa (HC) et UI cohérente
       state.activePhase = 'Activité CHGT de PO';
+      state.phaseValidation = {};
       if (els.start) {
         els.start.disabled = true;
         els.start.classList.remove('primary');
@@ -3847,6 +4072,7 @@ ${buildReportHtml()}
         els.start.innerHTML = '<span class="icon">▶</span>Démarrer';
       }
       runtime.focusedOperator = state.defaultOperatorIndex || 0;
+      runtime.subOpChronos.clear();
       cancelAnimationFrame(runtime.animationFrame);
 
       // 4) Sauvegarde + re-render + recentrage opé courante
@@ -3943,6 +4169,10 @@ ${buildReportHtml()}
             // retirer du set "complété"
             ensureCompletedStructures();
             state.completedOpsByOp[opName][state.activePhase].delete(m.opId || m.label);
+            ensurePhaseValidationStructure();
+            if (state.phaseValidation[state.activePhase]) {
+              delete state.phaseValidation[state.activePhase];
+            }
             // supprimer la marque
             state.marks.splice(i,1);
             saveState(true);
@@ -3955,6 +4185,12 @@ ${buildReportHtml()}
         }
         showToast('Rien à annuler', 'info');
       });
+    }
+    if (els.toggleSubChrono) {
+      els.toggleSubChrono.addEventListener('click', toggleSubOpChrono);
+    }
+    if (els.validatePhase) {
+      els.validatePhase.addEventListener('click', handlePhaseValidation);
     }
     document.addEventListener('keydown', handleShortcuts);
   }
