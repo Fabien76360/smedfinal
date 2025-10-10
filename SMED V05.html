@@ -483,6 +483,25 @@ button:not(:disabled):active { transform:translateY(1px); }
 }
 .op-pill.done .index { background:rgba(61,220,151,.45); color:#021221; }
 .op-pill.done .check { display:inline; }
+.op-pill .op-timer{
+  margin-left:auto;
+  font-variant-numeric:tabular-nums;
+  font-size:.9rem; opacity:.9;
+  padding:4px 8px; border-radius:10px;
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+}
+.op-pill.current .op-timer{ outline:1px solid rgba(61,220,151,.35); }
+.op-chip .op-timer{
+  margin-left:auto;
+  font-variant-numeric:tabular-nums;
+  font-size:.9rem;
+  opacity:.9;
+  padding:4px 8px;
+  border-radius:10px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+}
+.op-chip.running .op-timer{ outline:1px solid rgba(61,220,151,.35); }
 .check { display:none; font-weight:700; }
 .op-chip { display:flex; align-items:center; gap:.5rem; padding:.6rem .8rem; border-radius:14px; background:#0e1b2a; border:1px solid rgba(0,255,200,.35); }
 .op-main { flex:1; display:flex; align-items:center; gap:.6rem; background:transparent; border:0; color:#e9eef7; cursor:pointer; text-align:left; }
@@ -1281,16 +1300,20 @@ summary { cursor:pointer; }
   };
 
   let state = migrate(loadState());
-  const runtime = {
-    activePage: 'timerPage',
-    animationFrame: null,
-    lastTick: performance.now(),
-    focusedOperator: state.defaultOperatorIndex || 0,
-    journalHidden: false,
-    analysisTimeout: null,
-    shouldScrollToCurrent: false,
-    quickEventMenu: null
-  };
+  const runtime = window.runtime || {};
+  Object.assign(runtime, {
+    activePage: runtime.activePage || 'timerPage',
+    animationFrame: runtime.animationFrame || null,
+    lastTick: typeof runtime.lastTick === 'number' ? runtime.lastTick : performance.now(),
+    focusedOperator: Number.isInteger(runtime.focusedOperator) ? runtime.focusedOperator : (state.defaultOperatorIndex || 0),
+    journalHidden: Boolean(runtime.journalHidden),
+    analysisTimeout: typeof runtime.analysisTimeout === 'number' ? runtime.analysisTimeout : null,
+    shouldScrollToCurrent: Boolean(runtime.shouldScrollToCurrent),
+    quickEventMenu: runtime.quickEventMenu || null
+  });
+  window.runtime = runtime;
+  runtime.opRunning = runtime.opRunning || new Map();
+  runtime.opRunning.clear();
 
   let currentOpId = null;
   let currentOpStartMs = null;
@@ -1569,10 +1592,60 @@ summary { cursor:pointer; }
     return `${minutes}:${seconds}`;
   }
 
+  function fmtOp(ms){
+    const t = Math.max(0, Math.floor(ms/1000));
+    const m = String(Math.floor(t/60)).padStart(2,'0');
+    const s = String(t%60).padStart(2,'0');
+    return `${m}:${s}`;
+  }
+
+  function currentPendingOperation(operatorIndex){
+    const operatorName = getCurrentOperatorName(operatorIndex);
+    const list = (state.phases[state.activePhase] || [])
+      .filter(op => op.enabled !== false && (typeof op.operatorIndex === 'number' ? op.operatorIndex : state.defaultOperatorIndex) === operatorIndex);
+    ensureCompletedStructures();
+    const doneSet = (state.completedOpsByOp[operatorName] && state.completedOpsByOp[operatorName][state.activePhase]) || new Set();
+    return list.find(op => !doneSet.has(op.id || op.name)) || null;
+  }
+
+  function startOpTimer(op){
+    if (!op) return;
+    const id = op.id || op.name;
+    if (!id || runtime.opRunning.has(id)) return;
+    runtime.opRunning.set(id, Date.now());
+  }
+
+  function stopOpTimer(op){
+    if (!op) return 0;
+    const id = op.id || op.name;
+    if (!id) return 0;
+    const start = runtime.opRunning.get(id);
+    if (!start) return 0;
+    runtime.opRunning.delete(id);
+    return Date.now() - start;
+  }
+
+  function startFirstPendingForActiveOperators(){
+    if (!state.runningSince) return;
+    if (currentOpId !== null) return;
+    ensureCompletedStructures();
+    let started = false;
+    state.operators.forEach((_, idx) => {
+      if (!state.multiView && idx !== state.defaultOperatorIndex) return;
+      if (started) return;
+      const next = currentPendingOperation(idx);
+      if (next) {
+        startOp(next.id, state.activePhase, idx, next.name);
+        started = true;
+      }
+    });
+  }
+
   function markOpUI(opId, running){
     const chip = document.querySelector(`.op-chip[data-op-id="${opId}"]`);
     if (!chip) return;
     chip.classList.toggle('running', Boolean(running));
+    chip.classList.toggle('current', Boolean(running));
     const status = chip.querySelector('.status');
     if (!status) return;
     if (running){
@@ -1593,12 +1666,15 @@ summary { cursor:pointer; }
 
   function updateRunningOpTime(now){
     if (currentOpId === null || currentOpStartMs === null) return;
-    const timeEl = document.querySelector(`.op-chip[data-op-id="${currentOpId}"] .time`);
-    if (!timeEl) return;
+    const chip = document.querySelector(`.op-chip[data-op-id="${currentOpId}"]`);
+    if (!chip) return;
+    const timeEl = chip.querySelector('.time');
+    const timerEl = chip.querySelector('.op-timer');
     const base = opTotals.get(currentOpId) || 0;
     const current = typeof now === 'number' ? now : nowMs();
     const elapsed = Math.max(0, current - currentOpStartMs);
-    timeEl.textContent = formatMs(base + elapsed);
+    if (timeEl) timeEl.textContent = formatMs(base + elapsed);
+    if (timerEl) timerEl.textContent = fmtOp(elapsed);
   }
 
   function refreshOpChip(opId){
@@ -1607,6 +1683,10 @@ summary { cursor:pointer; }
     if (timeEl) timeEl.textContent = formatMs(total);
     const chip = document.querySelector(`.op-chip[data-op-id="${opId}"]`);
     if (chip){
+      const timerEl = chip.querySelector('.op-timer');
+      if (timerEl) timerEl.textContent = fmtOp(0);
+      chip.classList.remove('current');
+      chip.classList.remove('running');
       if (total > 0){
         chip.classList.add('done');
       } else {
@@ -1626,6 +1706,9 @@ summary { cursor:pointer; }
     currentOpOperatorId = typeof operatorId === 'number' ? operatorId : getCurrentOperatorId();
     currentOpStartMs = nowMs();
     currentOpLabel = label || getOperationById(opId)?.name || '';
+    if (state.runningSince) {
+      startOpTimer(getOperationById(opId) || { id: opId });
+    }
     runtime.shouldScrollToCurrent = true;
     markOpUI(opId, true);
     requestTick();
@@ -1637,22 +1720,26 @@ summary { cursor:pointer; }
     const start = currentOpStartMs;
     if (typeof start !== 'number'){ cleanupCurrentOp(); requestTick(); return; }
     const elapsed = end - start;
+    const operation = getOperationById(currentOpId) || { id: currentOpId };
     if (elapsed < 800){
+      stopOpTimer(operation);
       unmarkOpUI(currentOpId);
       refreshOpChip(currentOpId);
       cleanupCurrentOp();
       requestTick();
       return;
     }
+    const opElapsed = stopOpTimer(operation);
     const phaseId = currentOpPhaseId || getCurrentPhaseId();
     const operatorId = typeof currentOpOperatorId === 'number' ? currentOpOperatorId : getCurrentOperatorId();
+    const effectiveDuration = opElapsed > 0 ? opElapsed : elapsed;
     const seg = {
       opId: currentOpId,
       phaseId,
       operatorId,
       startMs: start,
       endMs: end,
-      durationMs: elapsed
+      durationMs: effectiveDuration
     };
     segments.push(seg);
     if (seg.opId){
@@ -1662,8 +1749,8 @@ summary { cursor:pointer; }
     unmarkOpUI(seg.opId);
 
     const operatorName = getCurrentOperatorName(operatorId);
-    const operation = getOperationById(seg.opId);
-    const label = currentOpLabel || operation?.name || 'Opération';
+    const opDetails = getOperationById(seg.opId);
+    const label = currentOpLabel || opDetails?.name || 'Opération';
     ensureCompletedStructures();
     const key = seg.opId || label;
     if (state.completedOpsByOp[operatorName] && state.completedOpsByOp[operatorName][phaseId]){
@@ -1681,9 +1768,21 @@ summary { cursor:pointer; }
       hc: phaseId === 'Activité CHGT de PO',
       durationMs: seg.durationMs
     });
+    const lastMark = state.marks[state.marks.length - 1];
+    if (lastMark && lastMark.kind === 'op' && (lastMark.opId === seg.opId || lastMark.label === label)) {
+      lastMark.durationMs = seg.durationMs;
+    }
     saveState();
     renderLog();
     renderOperatorColumns();
+    requestAnimationFrame(() => {
+      if (!state.runningSince) return;
+      if (currentOpId !== null) return;
+      const nextOp = currentPendingOperation(operatorId);
+      if (nextOp) {
+        startOp(nextOp.id, state.activePhase, operatorId, nextOp.name);
+      }
+    });
     updateAnalysisDelayed();
     cleanupCurrentOp();
     requestTick();
@@ -1807,11 +1906,12 @@ summary { cursor:pointer; }
         renderOperatorColumns();
       });
 
+      const doneSet = (state.completedOpsByOp[operatorName] && state.completedOpsByOp[operatorName][state.activePhase]) || new Set();
       const phaseOps = (state.phases[state.activePhase] || []).filter(operation => {
         if (operation.enabled === false) return false;
         const assignedIndex = typeof operation.operatorIndex === 'number' ? operation.operatorIndex : state.defaultOperatorIndex;
         return assignedIndex === idx;
-      });
+      }).filter(operation => !doneSet.has(operation.id || operation.name));
 
       card.innerHTML = `<div class="operator-header">
           <h3>${escapeHtml(operatorName)}</h3>
@@ -1859,6 +1959,11 @@ summary { cursor:pointer; }
 
         main.append(status, indexSpan, labelSpan, timeSpan);
         chip.appendChild(main);
+
+        const timerSpan = document.createElement('span');
+        timerSpan.className = 'op-timer';
+        timerSpan.textContent = '00:00';
+        chip.appendChild(timerSpan);
 
         const noteBtn = document.createElement('button');
         noteBtn.type = 'button';
@@ -1930,13 +2035,21 @@ summary { cursor:pointer; }
 
         if (currentOpId === operation.id) {
           chip.classList.add('running');
+          chip.classList.add('current');
           const dot = document.createElement('span');
           dot.className = 'dot';
           status.replaceChildren(dot);
+          const runningStart = runtime.opRunning.get(operation.id);
+          if (runningStart) {
+            timerSpan.textContent = fmtOp(Date.now() - runningStart);
+          }
         }
         const totalMs = opTotals.get(operation.id) || 0;
         if (totalMs > 0) {
           chip.classList.add('done');
+          timerSpan.textContent = fmtOp(0);
+        } else {
+          timerSpan.textContent = '00:00';
         }
 
         return wrapper;
@@ -2101,6 +2214,7 @@ summary { cursor:pointer; }
     });
     renderPhaseChips();
     renderOperatorColumns();
+    startFirstPendingForActiveOperators();
     renderLog();
     updateDisplay();
     saveState();
@@ -2139,6 +2253,7 @@ summary { cursor:pointer; }
       els.start.innerHTML = 'En cours';
     }
     requestTick();
+    startFirstPendingForActiveOperators();
     saveState();
     renderLog();
     updateDisplay();
@@ -2159,6 +2274,15 @@ summary { cursor:pointer; }
     }
     if (currentOpId !== null) {
       updateRunningOpTime(now);
+    }
+    if (runtime.opRunning.size) {
+      const wallNow = Date.now();
+      runtime.opRunning.forEach((start, id) => {
+        const pill = document.querySelector(`.op-chip[data-op-id="${id}"]`);
+        if (!pill) return;
+        const span = pill.querySelector('.op-timer');
+        if (span) span.textContent = fmtOp(wallNow - start);
+      });
     }
     if (state.runningSince || currentOpId !== null) {
       runtime.animationFrame = requestAnimationFrame(tick);
