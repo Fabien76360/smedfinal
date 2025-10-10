@@ -290,7 +290,19 @@ button:disabled {
   opacity:.5;
   transform:none !important;
 }
+#btn-next-phase.btn-enabled {
+  outline:2px solid rgba(61,220,151,.4);
+  outline-offset:2px;
+  border-color:rgba(61,220,151,.45);
+  background:rgba(61,220,151,.12);
+  color:#3ddc97;
+}
 button:not(:disabled):active { transform:translateY(1px); }
+button.btn {
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.18);
+  color:var(--fg);
+}
 .icon { font-family:"Fira Code", monospace; font-size:1rem; }
 .progress-bar {
   width:100%;
@@ -1043,6 +1055,7 @@ summary { cursor:pointer; }
                   <button id="lap" class="secondary" type="button"><span class="icon">✦</span>Évènement Hors changement</button>
                   <button id="end" class="warn" type="button"><span class="icon">■</span>Fin du changement</button>
                   <button id="reset" class="danger" type="button"><span class="icon">↺</span>Reset session</button>
+                  <button id="btn-next-phase" class="btn" type="button" disabled>Passer à la phase suivante</button>
                 </div>
               </div>
               <div class="progress-bar" id="progress" aria-hidden="true"><div class="progress-value"></div></div>
@@ -1244,6 +1257,12 @@ summary { cursor:pointer; }
     runningSince: null,
     sessionElapsedMs: 0,
     completedOpsByOp: {},
+    phaseValidated: {
+      'Activité CHGT de PO': false,
+      'Début de PO': false,
+      'Fin de PO': false,
+      'Vide de ligne': false
+    },
     multiViewOverride: null
   });
 
@@ -1255,6 +1274,7 @@ summary { cursor:pointer; }
     lap: document.getElementById('lap'),
     end: document.getElementById('end'),
     reset: document.getElementById('reset'),
+    nextPhase: document.getElementById('btn-next-phase'),
     state: document.getElementById('state'),
     progress: document.getElementById('progress').querySelector('.progress-value'),
     targetMin: document.getElementById('targetMin'),
@@ -1369,6 +1389,10 @@ summary { cursor:pointer; }
     merged.events = Array.isArray(merged.events)
       ? merged.events.map(label => typeof label === 'string' ? label.trim() : '').filter(label => label)
       : [];
+    merged.phaseValidated = (typeof merged.phaseValidated === 'object' && merged.phaseValidated) ? merged.phaseValidated : {};
+    ['Activité CHGT de PO','Début de PO','Fin de PO','Vide de ligne'].forEach(phase => {
+      merged.phaseValidated[phase] = merged.phaseValidated[phase] === true;
+    });
     // PATCH SMED — affichage courant only
     merged._onlyCurrent = !!merged._onlyCurrent;
     Object.keys(merged.completedOpsByOp).forEach(op => {
@@ -1428,6 +1452,7 @@ summary { cursor:pointer; }
         copy.completedOpsByOp[op][ph] = Array.from(state.completedOpsByOp[op][ph]);
       });
     });
+    copy.phaseValidated = Object.assign({}, state.phaseValidated || {});
     return copy;
   }
 
@@ -1467,6 +1492,13 @@ summary { cursor:pointer; }
     if (!showMillis) return `${h}:${m}:${s}`;
     const cent = String(Math.floor((ms % 1000)/10)).padStart(2,'0');
     return `${h}:${m}:${s}.${cent}`;
+  }
+
+  function formatSignedDuration(ms) {
+    if (!Number.isFinite(ms)) ms = 0;
+    if (ms === 0) return '0:00:00';
+    const sign = ms > 0 ? '+' : '−';
+    return `${sign}${formatDuration(Math.abs(ms))}`;
   }
 
   function escapeHtml(value) {
@@ -1516,6 +1548,93 @@ summary { cursor:pointer; }
         }
       });
     }
+  }
+
+  function isTimedPhase(phaseId) {
+    return timedPhases.includes(phaseId);
+  }
+
+  function isPhaseComplete(phaseId) {
+    if (!isTimedPhase(phaseId)) return false;
+    const allOps = (state.phases[phaseId] || []).filter(op => op.enabled !== false);
+    if (!allOps.length) return true;
+    const allIds = new Set(allOps.map(op => op.id || op.name));
+    ensureCompletedStructures();
+    const doneAll = new Set();
+    state.operators.forEach((_, idx) => {
+      const name = getCurrentOperatorName(idx);
+      const bucket = state.completedOpsByOp?.[name]?.[phaseId];
+      if (bucket instanceof Set) {
+        bucket.forEach(id => doneAll.add(id));
+      }
+    });
+    for (const id of allIds) {
+      if (!doneAll.has(id)) return false;
+    }
+    return true;
+  }
+
+  function getNextTimedPhaseId(phaseId) {
+    const idx = timedPhases.indexOf(phaseId);
+    if (idx >= 0 && idx < timedPhases.length - 1) {
+      return timedPhases[idx + 1];
+    }
+    return null;
+  }
+
+  function registerPhaseValidation(phaseId, timestamp) {
+    if (!isTimedPhase(phaseId)) return false;
+    if (!isPhaseComplete(phaseId)) return false;
+    state.phaseValidated = state.phaseValidated || {};
+    if (state.phaseValidated[phaseId]) return false;
+    state.phaseValidated[phaseId] = true;
+    const alreadyLogged = state.marks.some(mark => mark.kind === 'event' && mark.phase === phaseId && mark.label === 'Phase validée');
+    if (!alreadyLogged) {
+      state.marks.push({
+        t: typeof timestamp === 'number' ? timestamp : getSessionElapsed(),
+        phase: phaseId,
+        label: 'Phase validée',
+        kind: 'event',
+        hc: false,
+        note: '',
+        operator: '',
+        durationMs: 0
+      });
+    }
+    return true;
+  }
+
+  function ensurePhaseValidationIntegrity(phaseId) {
+    if (!isTimedPhase(phaseId)) return false;
+    const complete = isPhaseComplete(phaseId);
+    state.phaseValidated = state.phaseValidated || {};
+    let changed = false;
+    if (complete) {
+      if (!state.phaseValidated[phaseId]) {
+        const lastOpMark = [...state.marks].reverse().find(mark => mark.phase === phaseId && mark.kind === 'op');
+        const ts = lastOpMark ? (lastOpMark.t + 1) : getSessionElapsed();
+        const added = registerPhaseValidation(phaseId, ts);
+        state.phaseValidated[phaseId] = true;
+        if (added) {
+          state.marks.sort((a, b) => (a.t || 0) - (b.t || 0));
+        }
+        changed = true;
+      }
+    } else {
+      if (state.phaseValidated[phaseId]) {
+        state.phaseValidated[phaseId] = false;
+        changed = true;
+      }
+      for (let i = state.marks.length - 1; i >= 0; i--) {
+        const mark = state.marks[i];
+        if (mark.kind === 'event' && mark.phase === phaseId && mark.label === 'Phase validée') {
+          state.marks.splice(i, 1);
+          changed = true;
+          break;
+        }
+      }
+    }
+    return changed;
   }
 
   function getCurrentOperatorName(index) {
@@ -1772,6 +1891,7 @@ summary { cursor:pointer; }
     if (lastMark && lastMark.kind === 'op' && (lastMark.opId === seg.opId || lastMark.label === label)) {
       lastMark.durationMs = seg.durationMs;
     }
+    ensurePhaseValidationIntegrity(phaseId);
     saveState();
     renderLog();
     renderOperatorColumns();
@@ -1849,6 +1969,19 @@ summary { cursor:pointer; }
         hcBadge.style.display = 'none';
       }
     }
+    updatePhaseControls();
+  }
+
+  function updatePhaseControls() {
+    const nextBtn = els.nextPhase || document.getElementById('btn-next-phase');
+    if (!nextBtn) return;
+    state.phaseValidated = state.phaseValidated || {};
+    const active = state.activePhase;
+    const nextPhase = getNextTimedPhaseId(active);
+    const canGoNext = Boolean(isTimedPhase(active) && state.phaseValidated[active] === true && nextPhase);
+    nextBtn.disabled = !canGoNext;
+    nextBtn.classList.toggle('btn-enabled', canGoNext);
+    nextBtn.setAttribute('aria-disabled', canGoNext ? 'false' : 'true');
   }
 
   function renderOperatorColumns() {
@@ -2074,6 +2207,7 @@ summary { cursor:pointer; }
       runtime.shouldScrollToCurrent = false;
       requestAnimationFrame(scrollCurrentOperationIntoView);
     }
+    updatePhaseControls();
   }
 
   function scrollCurrentOperationIntoView() {
@@ -2166,6 +2300,15 @@ summary { cursor:pointer; }
         }
       }
     });
+    let validationChanged = false;
+    timedPhases.forEach(phase => {
+      if (ensurePhaseValidationIntegrity(phase)) {
+        validationChanged = true;
+      }
+    });
+    if (validationChanged) {
+      saveState();
+    }
   }
 
   function changePhase(phase) {
@@ -2219,6 +2362,28 @@ summary { cursor:pointer; }
     updateDisplay();
     saveState();
     updateAnalysisDelayed();
+  }
+
+  function handleNextPhaseClick() {
+    if (!isTimedPhase(state.activePhase)) {
+      updatePhaseControls();
+      return;
+    }
+    state.phaseValidated = state.phaseValidated || {};
+    if (state.phaseValidated[state.activePhase] !== true) {
+      updatePhaseControls();
+      return;
+    }
+    const nextPhase = getNextTimedPhaseId(state.activePhase);
+    if (!nextPhase) {
+      updatePhaseControls();
+      return;
+    }
+    state.phaseValidated[nextPhase] = false;
+    changePhase(nextPhase);
+    ensurePhaseValidationIntegrity(nextPhase);
+    updatePhaseControls();
+    saveState();
   }
 
   function getSessionElapsed() {
@@ -2508,6 +2673,7 @@ summary { cursor:pointer; }
     });
     els.totalCell.textContent = formatDuration(totalChrono);
     els.logCount.textContent = `${state.marks.length} entrées`;
+    updatePhaseControls();
   }
 
   function handleNoteEdit(event) {
@@ -2584,15 +2750,27 @@ body{font-family:"Inter","Segoe UI",sans-serif;margin:40px;background:#f4f6fb;co
 .badge{display:inline-block;padding:4px 10px;border-radius:999px;background:#eef2fc;color:#3a4a7a;font-size:12px;}
 .badge.hc{background:#ffe8cc;color:#ad5a00;}
 .muted{color:#6c7693;font-style:italic;}
-.journal-table{width:100%;border-collapse:collapse;margin-top:16px;}
-.journal-table th,.journal-table td{border:1px solid #dbe3f6;padding:8px 10px;font-size:12px;text-align:left;}
-.journal-table th{background:#eef2fc;letter-spacing:0.06em;text-transform:uppercase;color:#4c5675;}
+.journal-filters{display:flex;gap:8px;margin:16px 0;}
+.journal-filters .btn-sm{border:1px solid #dbe3f6;background:#fff;color:#0f1a34;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s ease,color .2s ease,border-color .2s ease;}
+.journal-filters .btn-sm.active{background:#0b1533;color:#fff;border-color:#0b1533;}
+.journal-group{background:#fff;border:1px solid #dbe3f6;border-radius:16px;padding:18px;margin-bottom:18px;box-shadow:0 8px 18px rgba(15,26,52,.08);}
+.journal-phase-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;}
+.journal-phase-header.over-target{border-left:4px solid #ef476f;padding-left:12px;}
+.journal-phase-header h3{margin:0;font-size:18px;color:#0b1533;}
+.journal-phase-meta{margin:6px 0 0;color:#5b6380;font-size:13px;}
+.journal-table{width:100%;border-collapse:collapse;margin-top:8px;}
+.journal-table th,.journal-table td{border:1px solid #dbe3f6;padding:10px 12px;font-size:13px;text-align:left;}
+.journal-table th{background:#eef2fc;letter-spacing:0.06em;text-transform:uppercase;color:#4c5675;font-size:12px;}
 .journal-table td .badge{font-size:11px;}
-@media print{body{margin:20mm;background:#fff;color:#000;} .report-header{border-color:#c5cee4;} .kpi-card,.prepa-card,.list-grid article{box-shadow:none;} a{color:inherit;}}
+.journal-table tbody tr{transition:background .2s ease;}
+.journal-row.over-target{background:rgba(255,99,71,.12);}
+.journal-row.is-hc td:nth-child(5){color:#ad5a00;font-weight:600;}
+.journal-row.total-row{background:rgba(61,220,151,.12);font-weight:600;}
+@media print{body{margin:20mm;background:#fff;color:#000;} .report-header{border-color:#c5cee4;} .kpi-card,.prepa-card,.list-grid article,.journal-group{box-shadow:none;} a{color:inherit;}}
 </style>
 </head>
 <body>
-${buildReportHtml()}
+${buildReportHtml()}<script>(function(){var buttons=document.querySelectorAll('.journal-filters .btn-sm');buttons.forEach(function(btn){btn.addEventListener('click',function(){buttons.forEach(function(b){b.classList.toggle('active',b===btn);});var filter=btn.getAttribute('data-filter');document.querySelectorAll('.journal-row').forEach(function(row){var isHc=row.classList.contains('is-hc');if(filter==='all'){row.style.display='';}else if(filter==='nohc'){row.style.display=isHc?'none':'';}else if(filter==='hc'){row.style.display=isHc?'':'none';}});});});})();</script>
 </body>
 </html>`;
     const filename = options.filename || `smed_${lineSegment}_${Date.now()}.html`;
@@ -2657,9 +2835,101 @@ ${buildReportHtml()}
     const prepaNotes = analysis.prepa.notes.length
       ? `<ul>${analysis.prepa.notes.map(note => `<li>${escapeHtml(note)}</li>`).join('')}</ul>`
       : '<p class="muted">Aucun commentaire</p>';
-    const journalRows = state.marks.length
-      ? state.marks.map((mark, idx) => `<tr><td>${idx + 1}</td><td>${formatDuration(mark.t)}</td><td>${formatDuration(mark.durationMs || 0)}</td><td>${mark.hc ? '<span class="badge hc">HC</span>' : 'Non'}</td><td>${escapeHtml(mark.phase)}</td><td>${escapeHtml(mark.operator || '')}</td><td>${escapeHtml(mark.label)}</td><td>${escapeHtml(mark.note || '')}</td></tr>`).join('')
-      : '<tr><td colspan="8" class="muted">Journal vide</td></tr>';
+    const analysisPhaseMap = new Map(analysis.phases.map(item => [item.phase, item]));
+    const phaseTargetsMs = new Map(timedPhases.map(phase => [phase, targetMinutesForPhase(phase) * 60000]));
+    const phaseSynthRows = timedPhases.map(phase => {
+      const info = analysisPhaseMap.get(phase);
+      const targetMs = phaseTargetsMs.get(phase) || 0;
+      const durationMs = info ? info.duration : 0;
+      const diffMs = durationMs - targetMs;
+      const percent = info ? info.percent : (targetMs > 0 ? Math.round((durationMs / targetMs) * 100) : 0);
+      const percentText = targetMs > 0 && Number.isFinite(percent) ? `${percent}%` : '—';
+      return `<tr><td>${escapeHtml(phase)}</td><td>${formatDuration(durationMs)}</td><td>${formatDuration(targetMs)}</td><td>${formatSignedDuration(diffMs)}</td><td>${percentText}</td></tr>`;
+    }).join('');
+    const sortedMarks = [...state.marks].sort((a, b) => (a.t || 0) - (b.t || 0));
+    const phaseCumMs = new Map();
+    const groupedMarks = new Map();
+    const phaseOrder = [];
+    sortedMarks.forEach((mark, idx) => {
+      const key = mark.phase || '—';
+      if (!groupedMarks.has(key)) {
+        groupedMarks.set(key, []);
+        phaseOrder.push(key);
+      }
+      const isOp = mark.kind === 'op';
+      const durationMs = Number(mark.durationMs || 0);
+      const previous = phaseCumMs.get(key) || 0;
+      const increment = (isOp && !mark.hc) ? durationMs : 0;
+      const newCum = previous + increment;
+      phaseCumMs.set(key, newCum);
+      groupedMarks.get(key).push({
+        index: idx + 1,
+        timestamp: formatDuration(mark.t || 0),
+        durationText: formatDuration(durationMs),
+        cumulText: (isOp && !mark.hc) ? formatDuration(newCum) : '—',
+        isHc: !!mark.hc,
+        phase: mark.phase || '',
+        operator: mark.operator || '',
+        label: mark.label || '',
+        note: mark.note || '',
+        isOp,
+        durationMs,
+        cumulMs: newCum,
+        overTarget: isTimedPhase(mark.phase) && increment > 0 && newCum > (phaseTargetsMs.get(mark.phase) || 0)
+      });
+    });
+    const journalGroupsHtml = phaseOrder.length
+      ? phaseOrder.map(phaseKey => {
+          const rows = groupedMarks.get(phaseKey) || [];
+          const displayPhase = phaseKey || 'Sans phase';
+          const timed = isTimedPhase(phaseKey);
+          const targetMs = timed ? (phaseTargetsMs.get(phaseKey) || 0) : 0;
+          const realMs = rows.reduce((sum, row) => {
+            if (!row.isOp) return sum;
+            if (timed && row.isHc) return sum;
+            return sum + row.durationMs;
+          }, 0);
+          const info = analysisPhaseMap.get(phaseKey);
+          const percent = timed ? (info ? info.percent : (targetMs > 0 ? Math.round((realMs / targetMs) * 100) : 0)) : null;
+          const percentLabel = timed && targetMs > 0 && Number.isFinite(percent) ? `${percent}%` : '—';
+          const diffMs = timed ? (realMs - targetMs) : 0;
+          const headerClass = timed && diffMs > 0 ? ' over-target' : '';
+          const isHcPhase = phaseKey === 'Activité CHGT de PO';
+          const badge = isHcPhase ? ' <span class="badge hc">HC</span>' : '';
+          let rowsHtml = rows.map(row => {
+            const rowClasses = ['journal-row'];
+            if (row.isHc) rowClasses.push('is-hc');
+            if (row.overTarget) rowClasses.push('over-target');
+            const hcCell = row.isHc ? '<span class="badge hc">HC</span>' : 'Non';
+            const phaseCell = row.phase ? escapeHtml(row.phase) : '—';
+            const operatorCell = row.operator ? escapeHtml(row.operator) : '—';
+            const labelCell = row.label ? escapeHtml(row.label) : '—';
+            const noteCell = row.note ? escapeHtml(row.note) : '—';
+            return `<tr class="${rowClasses.join(' ')}"><td>${row.index}</td><td>${row.timestamp}</td><td>${row.durationText}</td><td>${row.cumulText}</td><td>${hcCell}</td><td>${phaseCell}</td><td>${operatorCell}</td><td>${labelCell}</td><td>${noteCell}</td></tr>`;
+          }).join('');
+          if (!rowsHtml) {
+            rowsHtml = '<tr class="journal-row"><td colspan="9" class="muted">Aucun événement</td></tr>';
+          }
+          const totalRow = `<tr class="journal-row total-row"><td>Σ</td><td>—</td><td>${formatDuration(realMs)}</td><td>${timed ? formatDuration(realMs) : '—'}</td><td>—</td><td>—</td><td>—</td><td>Total phase</td><td>—</td></tr>`;
+          const meta = timed
+            ? `Durée réelle <strong>${formatDuration(realMs)}</strong> · Cible <strong>${formatDuration(targetMs)}</strong> · Écart <strong>${formatSignedDuration(diffMs)}</strong> · Atteinte <strong>${percentLabel}</strong>`
+            : `Durée réelle <strong>${formatDuration(realMs)}</strong> · Hors chrono`;
+          return `
+            <article class="journal-group">
+              <div class="journal-phase-header${headerClass}">
+                <div>
+                  <h3>${escapeHtml(displayPhase)}${badge}</h3>
+                  <p class="journal-phase-meta">${meta}</p>
+                </div>
+              </div>
+              <table class="journal-table journal-phase-table">
+                <thead><tr><th>#</th><th>Horodatage</th><th>Durée</th><th>Cumul phase</th><th>HC</th><th>Phase</th><th>Opérateur</th><th>Libellé</th><th>Note</th></tr></thead>
+                <tbody>${rowsHtml}${totalRow}</tbody>
+              </table>
+            </article>
+          `;
+        }).join('')
+      : '<p class="muted">Journal vide</p>';
     return `
       <header class="report-header">
         <div>
@@ -2686,6 +2956,10 @@ ${buildReportHtml()}
         <table class="data-table"><thead><tr><th>Opérateur</th><th>Durée</th><th>%</th></tr></thead><tbody>${operatorRows}</tbody></table>
       </section>
       <section class="section">
+        <h2>Synthèse par phase</h2>
+        <table class="data-table"><thead><tr><th>Phase</th><th>Durée réelle</th><th>Cible</th><th>Écart</th><th>%</th></tr></thead><tbody>${phaseSynthRows}</tbody></table>
+      </section>
+      <section class="section">
         <h2>Analyse qualitative</h2>
         <div class="list-grid">
           <article><h3>Top contributeurs à l'écart</h3><ul>${topContribList}</ul></article>
@@ -2704,7 +2978,12 @@ ${buildReportHtml()}
       </section>
       <section class="section">
         <h2>Journal des événements</h2>
-        <table class="journal-table"><thead><tr><th>#</th><th>Horodatage</th><th>Durée</th><th>HC</th><th>Phase</th><th>Opérateur</th><th>Libellé</th><th>Note</th></tr></thead><tbody>${journalRows}</tbody></table>
+        <div class="journal-filters">
+          <button data-filter="all" class="btn-sm active">Tout</button>
+          <button data-filter="nohc" class="btn-sm">Sans HC</button>
+          <button data-filter="hc" class="btn-sm">HC seulement</button>
+        </div>
+        ${journalGroupsHtml}
       </section>
     `;
   }
@@ -3194,6 +3473,7 @@ ${buildReportHtml()}
     buildDefaultsForm();
     renderEventsList();
     renderAnalysis();
+    updatePhaseControls();
     if (els.start) {
       const hasStarted = state.marks.some(m => m.kind === 'start');
       if (state.activePhase === 'Activité CHGT de PO') {
@@ -3243,6 +3523,9 @@ ${buildReportHtml()}
         startTimer();
       });
     }
+    if (els.nextPhase) {
+      els.nextPhase.addEventListener('click', handleNextPhaseClick);
+    }
     // PATCH op-event — libellé bouton global
     els.lap.innerHTML = '<span class="icon">✦</span>Évènement Hors changement';
     els.lap.setAttribute('aria-haspopup', 'menu');
@@ -3272,6 +3555,7 @@ ${buildReportHtml()}
       // 2) Opérations validées -> vidage total
       state.completedOpsByOp = {};
       ensureCompletedStructures(); // recrée des Set vides par opérateur/phase
+      state.phaseValidated = Object.assign({}, DEFAULT_STATE().phaseValidated);
 
       // 3) Repartir en Prépa (HC) et UI cohérente
       state.activePhase = 'Activité CHGT de PO';
@@ -3379,6 +3663,7 @@ ${buildReportHtml()}
             }
             // supprimer la marque
             state.marks.splice(i,1);
+            ensurePhaseValidationIntegrity(state.activePhase);
             saveState(true);
             renderOperatorColumns();
             renderLog();
