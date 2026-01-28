@@ -883,6 +883,34 @@ summary { cursor:pointer; }
   background:var(--accent);
 }
 .gantt-legend span[data-kind="target"]::before { background:rgba(61,220,151,.5); }
+.gantt-simple { display:grid; gap:12px; }
+.gantt-simple-row { display:grid; gap:6px; }
+.gantt-simple-label { display:flex; justify-content:space-between; font-size:0.78rem; color:var(--muted); }
+.gantt-simple-bars { display:grid; gap:4px; }
+.gantt-simple-bar {
+  height:10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  overflow:hidden;
+}
+.gantt-simple-fill { height:100%; border-radius:inherit; }
+.gantt-simple-fill.target { background:rgba(255,255,255,.28); }
+.gantt-simple-fill.real.good { background:var(--accent); }
+.gantt-simple-fill.real.warn { background:var(--warn); }
+.gantt-simple-fill.real.bad { background:var(--danger); }
+.excel-table-wrapper { border:1px solid rgba(255,255,255,.08); border-radius:var(--radius-lg); overflow:auto; }
+.excel-table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+.excel-table th, .excel-table td { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06); }
+.excel-table tbody tr.is-good { background:rgba(61,220,151,.08); }
+.excel-table tbody tr.is-warn { background:rgba(255,183,3,.08); }
+.excel-table tbody tr.is-bad { background:rgba(239,71,111,.1); }
+.excel-table td:last-child { font-weight:600; }
+.summary-table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+.summary-table th, .summary-table td { padding:8px 10px; border-bottom:1px solid rgba(255,255,255,.06); }
+.summary-table tbody tr.is-total { font-weight:700; }
+.ipc-grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
+.ipc-grid .pilotage-card { gap:4px; }
+.ipc-grid small { color:var(--muted); }
 .reference-grid {
   display:grid;
   gap:16px;
@@ -1421,6 +1449,12 @@ summary { cursor:pointer; }
               <h3>Top écarts</h3>
               <ul id="pilotageTopGaps"></ul>
             </div>
+            <div class="panel-title" style="margin-top:18px;"><h3>Périmètre IPC</h3><span class="label-muted">Inter-PO</span></div>
+            <div class="grid-two">
+              <div class="field"><label>Dernier IPC PO N<input type="datetime-local" id="ipcLastTs"></label></div>
+              <div class="field"><label>Premier IPC PO N+1<input type="datetime-local" id="ipcFirstTs"></label></div>
+            </div>
+            <div class="ipc-grid" id="ipcSummary"></div>
           </div>
           <div class="panel compact">
             <div class="panel-title"><h3>Comparaison standard vs réel</h3><span class="label-muted">Opérations</span></div>
@@ -1434,8 +1468,38 @@ summary { cursor:pointer; }
             </div>
           </div>
           <div class="panel compact">
+            <div class="panel-title"><h3>Tableau opérations (Excel)</h3><span class="label-muted">Lecture seule</span></div>
+            <div class="excel-table-wrapper">
+              <table class="excel-table">
+                <thead>
+                  <tr>
+                    <th>Opération</th><th>Phase</th><th>Famille</th><th>Interne/Externe</th><th>Acteur</th>
+                    <th>Cible (min)</th><th>Réel (min)</th><th>Écart (min)</th><th>Écart (%)</th>
+                  </tr>
+                </thead>
+                <tbody id="excelOpsBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel compact">
+            <div class="panel-title"><h3>Synthèse par famille</h3><span class="label-muted">Cible vs réel</span></div>
+            <table class="summary-table">
+              <thead><tr><th>Famille</th><th>Réel</th><th>Cible</th><th>Écart</th></tr></thead>
+              <tbody id="familySummaryBody"></tbody>
+            </table>
+          </div>
+          <div class="panel compact">
+            <div class="panel-title"><h3>Synthèse Interne / Externe</h3><span class="label-muted">Cible vs réel</span></div>
+            <table class="summary-table">
+              <thead><tr><th>Type</th><th>Réel</th><th>Cible</th><th>Écart</th></tr></thead>
+              <tbody id="workTypeSummaryBody"></tbody>
+            </table>
+          </div>
+          <div class="panel compact">
             <div class="panel-title"><h3>Gantt performance</h3><span class="label-muted">Standard + réel</span></div>
+            <label class="switch-row" style="margin-bottom:8px;"><input id="simpleGanttToggle" type="checkbox"><span>Vue simple</span></label>
             <div id="ganttChart" class="gantt-chart"></div>
+            <div id="ganttSimpleChart" class="gantt-simple" hidden></div>
             <div class="gantt-legend"><span data-kind="target">Standard</span><span>Réel</span></div>
           </div>
           <div class="panel compact">
@@ -1446,10 +1510,13 @@ summary { cursor:pointer; }
           <div class="panel compact">
             <div class="panel-title"><h3>Historique sessions clôturées</h3><span class="label-muted">Multi-sessions</span></div>
             <div class="notice" id="historySummary"></div>
+            <div class="actions-row" style="margin-bottom:12px;">
+              <button id="exportHistoryCsv" class="ghost" type="button">Exporter historique CSV</button>
+            </div>
             <div class="history-table-wrapper">
               <table class="history-table">
                 <thead>
-                  <tr><th>Date</th><th>Ligne</th><th>PO</th><th>Standard</th><th>Réel</th><th>Écart</th><th>Cause</th></tr>
+                  <tr><th>Date</th><th>Ligne</th><th>PO</th><th>Standard</th><th>Réel</th><th>Écart</th><th>Inter-PO</th><th>Cause</th></tr>
                 </thead>
                 <tbody id="sessionHistoryBody"></tbody>
               </table>
@@ -1466,7 +1533,7 @@ summary { cursor:pointer; }
 <script>
 (() => {
   const STORAGE_KEY = 'smed_timer_v3';
-  const SCHEMA_VERSION = 6;
+  const SCHEMA_VERSION = 7;
   const phasesList = ['Activité CHGT de PO','Début de PO','Fin de PO','Vide de ligne'];
   const timedPhases = ['Début de PO','Fin de PO','Vide de ligne'];
   function newId(){ return 'op_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
@@ -1510,6 +1577,8 @@ summary { cursor:pointer; }
     po: '',
     mode: 'up',
     sessionId: newSessionId(),
+    ipcLastTs: '',
+    ipcFirstTs: '',
     operators: ['Opérateur A','', '', ''],
     defaultOperatorIndex: 0,
     multiView: true,
@@ -1617,12 +1686,21 @@ summary { cursor:pointer; }
     actorOptions: document.getElementById('actorOptions'),
     opsComparisonBody: document.getElementById('opsComparisonBody'),
     ganttChart: document.getElementById('ganttChart'),
+    ganttSimpleChart: document.getElementById('ganttSimpleChart'),
+    simpleGanttToggle: document.getElementById('simpleGanttToggle'),
     pilotageSummary: document.getElementById('pilotageSummary'),
     pilotageTopGaps: document.getElementById('pilotageTopGaps'),
+    ipcLastTs: document.getElementById('ipcLastTs'),
+    ipcFirstTs: document.getElementById('ipcFirstTs'),
+    ipcSummary: document.getElementById('ipcSummary'),
+    excelOpsBody: document.getElementById('excelOpsBody'),
+    familySummaryBody: document.getElementById('familySummaryBody'),
+    workTypeSummaryBody: document.getElementById('workTypeSummaryBody'),
     postChangeCause: document.getElementById('postChangeCause'),
     postChangeComment: document.getElementById('postChangeComment'),
     historySummary: document.getElementById('historySummary'),
-    sessionHistoryBody: document.getElementById('sessionHistoryBody')
+    sessionHistoryBody: document.getElementById('sessionHistoryBody'),
+    exportHistoryCsv: document.getElementById('exportHistoryCsv')
   };
 
   let state = migrate(loadState());
@@ -1636,7 +1714,8 @@ summary { cursor:pointer; }
     shouldScrollToCurrent: false,
     quickEventMenu: null,
     comparisonA: 'current',
-    comparisonB: 'target'
+    comparisonB: 'target',
+    simpleGantt: false
   };
   const phaseUiState = new Map();
   const phaseSections = new Map();
@@ -1709,6 +1788,8 @@ summary { cursor:pointer; }
       : { cause: '', comment: '' };
     merged.sessionHistory = Array.isArray(merged.sessionHistory) ? merged.sessionHistory : [];
     merged.sessionId = merged.sessionId || newSessionId();
+    merged.ipcLastTs = typeof merged.ipcLastTs === 'string' ? merged.ipcLastTs : '';
+    merged.ipcFirstTs = typeof merged.ipcFirstTs === 'string' ? merged.ipcFirstTs : '';
     merged.events = Array.isArray(merged.events)
       ? merged.events.map(label => typeof label === 'string' ? label.trim() : '').filter(label => label)
       : [];
@@ -1817,6 +1898,20 @@ summary { cursor:pointer; }
     return `${(ms / 60000).toFixed(digits)} min`;
   }
 
+  function formatDurationHm(ms) {
+    if (!Number.isFinite(ms)) return '—';
+    const totalMinutes = Math.max(0, Math.round(ms / 60000));
+    const h = Math.floor(totalMinutes / 60);
+    const m = String(totalMinutes % 60).padStart(2, '0');
+    return `${h}:${m}`;
+  }
+
+  function parseDateTimeValue(value) {
+    if (!value) return null;
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? null : time;
+  }
+
   function escapeHtml(value) {
     const entities = new Map([
       ['&', '&amp;'],
@@ -1856,6 +1951,32 @@ summary { cursor:pointer; }
   }
   function totalTargetMinutes() {
     return timedPhases.reduce((sum, phase) => sum + targetMinutesForPhase(phase), 0);
+  }
+
+  function computeIpcMetrics(ipcLastTs, ipcFirstTs, smedMs) {
+    const lastMs = parseDateTimeValue(ipcLastTs);
+    const firstMs = parseDateTimeValue(ipcFirstTs);
+    if (!lastMs || !firstMs || firstMs <= lastMs) {
+      return {
+        ipcLastMs: lastMs,
+        ipcFirstMs: firstMs,
+        interPoMs: null,
+        smedMs,
+        horsSmedMs: null,
+        partSmed: null
+      };
+    }
+    const interPoMs = firstMs - lastMs;
+    const horsSmedMs = Math.max(0, interPoMs - smedMs);
+    const partSmed = interPoMs ? smedMs / interPoMs : null;
+    return {
+      ipcLastMs: lastMs,
+      ipcFirstMs: firstMs,
+      interPoMs,
+      smedMs,
+      horsSmedMs,
+      partSmed
+    };
   }
 
   function targetMinutesForPhaseFrom(phases, phase) {
@@ -2627,6 +2748,8 @@ summary { cursor:pointer; }
       marks: state.marks.map(mark => ({ ...mark })),
       elapsedMs: state.elapsedMs,
       prepaElapsedMs: state.prepaElapsedMs,
+      ipcLastTs: state.ipcLastTs || '',
+      ipcFirstTs: state.ipcFirstTs || '',
       postChange: { ...(state.postChange || { cause: '', comment: '' }) }
     };
     state.sessionHistory.unshift(snapshot);
@@ -2705,7 +2828,7 @@ summary { cursor:pointer; }
     const headers = [
       'date_session','line','po','mode','hors_chrono','target_min_global','idx','horodatage','duree_ms','duree_hms',
       'operateur','phase','evenement','note','operation_id','operation_name','operation_target_min','operation_family',
-      'operation_type','operation_actor','cause_ecart','commentaire_ecart'
+      'operation_type','operation_actor','cause_ecart','commentaire_ecart','ipc_last_ts','ipc_first_ts'
     ];
     const rows = state.marks.map((mark, idx) => [
       new Date(state.sessionStart).toISOString(),
@@ -2744,13 +2867,81 @@ summary { cursor:pointer; }
         return found ? found.operation.actor || '' : '';
       })(),
       state.postChange?.cause || '',
-      state.postChange?.comment || ''
+      state.postChange?.comment || '',
+      state.ipcLastTs || '',
+      state.ipcFirstTs || ''
     ]);
     const csv = [headers.join(';')].concat(rows.map(r => r.map(value => `"${String(value).replace(/"/g,'""')}"`).join(';'))).join('\n');
     const rawLine = state.line && state.line.trim() ? state.line.trim() : 'L29';
     const lineSegment = rawLine.replace(/[^\w-]+/g, '_') || 'L29';
     const stamp = new Date().toISOString().slice(0,16).replace(/:/g, '-');
     downloadFile(`smed_${lineSegment}_${stamp}.csv`, `\uFEFF${csv}`, 'text/csv;charset=utf-8');
+  }
+
+  function exportHistoryCsv() {
+    const history = Array.isArray(state.sessionHistory) ? state.sessionHistory : [];
+    if (!history.length) {
+      showToast('Historique vide', 'info');
+      return;
+    }
+    const headers = [
+      'date_session','line','po','mode','target_min','real_min','gap_min',
+      'ipc_last_ts','ipc_first_ts','interpo_min','part_smed_percent','cause_ecart','commentaire_ecart',
+      'families_summary','interne_real_min','interne_target_min','externe_real_min','externe_target_min'
+    ];
+    const rows = history.map(session => {
+      const metrics = collectSessionMetricsFrom(session);
+      const rowsByOp = [];
+      Object.keys(session.phases || {}).forEach(phase => {
+        (session.phases[phase] || []).forEach(op => {
+          if (!op || op.enabled === false) return;
+          const targetMs = Number(op.targetMin || 0) * 60000;
+          const realMs = metrics.operationDurations.get(op.id) || 0;
+          rowsByOp.push({
+            family: op.family || 'Non défini',
+            workType: op.workType || 'Non défini',
+            targetMs,
+            realMs
+          });
+        });
+      });
+      const familySummary = buildFamilySummary(rowsByOp);
+      const workTypeSummary = buildWorkTypeSummary(rowsByOp);
+      const familyLabel = familySummary.length
+        ? familySummary.map(item => `${item.family}:${(item.realMs / 60000).toFixed(1)}/${(item.targetMs / 60000).toFixed(1)}`).join(' | ')
+        : '—';
+      const targetMs = totalTargetMinutesFrom(session.phases || {}) * 60000;
+      const totalMs = metrics.totalRealMs || session.elapsedMs || 0;
+      const gapMs = totalMs - targetMs;
+      const ipc = computeIpcMetrics(session.ipcLastTs, session.ipcFirstTs, totalMs);
+      const partSmed = ipc.partSmed == null ? '' : (ipc.partSmed * 100).toFixed(1);
+      const interPoMin = ipc.interPoMs == null ? '' : (ipc.interPoMs / 60000).toFixed(1);
+      const interne = workTypeSummary.find(item => item.type === 'Interne') || { realMs: 0, targetMs: 0 };
+      const externe = workTypeSummary.find(item => item.type === 'Externe') || { realMs: 0, targetMs: 0 };
+      return [
+        new Date(session.sessionStart || Date.now()).toISOString(),
+        session.line || '',
+        session.po || '',
+        session.mode || '',
+        (targetMs / 60000).toFixed(1),
+        (totalMs / 60000).toFixed(1),
+        (gapMs / 60000).toFixed(1),
+        session.ipcLastTs || '',
+        session.ipcFirstTs || '',
+        interPoMin,
+        partSmed,
+        session.postChange?.cause || '',
+        session.postChange?.comment || '',
+        familyLabel,
+        (interne.realMs / 60000).toFixed(1),
+        (interne.targetMs / 60000).toFixed(1),
+        (externe.realMs / 60000).toFixed(1),
+        (externe.targetMs / 60000).toFixed(1)
+      ];
+    });
+    const csv = [headers.join(';')].concat(rows.map(r => r.map(value => `"${String(value).replace(/"/g,'""')}"`).join(';'))).join('\n');
+    const stamp = new Date().toISOString().slice(0,16).replace(/:/g, '-');
+    downloadFile(`smed_historique_${stamp}.csv`, `\uFEFF${csv}`, 'text/csv;charset=utf-8');
   }
 
   async function exportHtml(options = {}) {
@@ -2872,6 +3063,8 @@ ${buildReportHtml()}
       : '<tr><td colspan="5" class="muted">Aucune opération mesurée</td></tr>';
     const postCause = escapeHtml(state.postChange?.cause || '—');
     const postComment = state.postChange?.comment ? escapeHtml(state.postChange.comment) : '—';
+    const ipcMetrics = computeIpcMetrics(state.ipcLastTs, state.ipcFirstTs, kpi.total);
+    const ipcPart = ipcMetrics.partSmed == null ? '—' : `${(ipcMetrics.partSmed * 100).toFixed(1)}%`;
     const journalRows = state.marks.length
       ? state.marks.map((mark, idx) => `<tr><td>${idx + 1}</td><td>${formatDuration(mark.t)}</td><td>${formatDuration(mark.durationMs || 0)}</td><td>${mark.hc ? '<span class="badge hc">HC</span>' : 'Non'}</td><td>${escapeHtml(mark.phase)}</td><td>${escapeHtml(mark.operator || '')}</td><td>${escapeHtml(mark.label)}</td><td>${escapeHtml(mark.note || '')}</td></tr>`).join('')
       : '<tr><td colspan="8" class="muted">Journal vide</td></tr>';
@@ -2911,6 +3104,17 @@ ${buildReportHtml()}
       <section class="section">
         <h2>Comparaison standard vs réel</h2>
         <table class="data-table"><thead><tr><th>Phase</th><th>Opération</th><th>Standard</th><th>Réel</th><th>Écart</th></tr></thead><tbody>${opsComparisonRows}</tbody></table>
+      </section>
+      <section class="section">
+        <h2>Périmètre IPC</h2>
+        <table class="data-table"><tbody>
+          <tr><th>Dernier IPC PO N</th><td>${escapeHtml(state.ipcLastTs || '—')}</td></tr>
+          <tr><th>Premier IPC PO N+1</th><td>${escapeHtml(state.ipcFirstTs || '—')}</td></tr>
+          <tr><th>Temps inter-PO</th><td>${formatDurationHm(ipcMetrics.interPoMs)}</td></tr>
+          <tr><th>Temps SMED réel</th><td>${formatDurationHm(ipcMetrics.smedMs)}</td></tr>
+          <tr><th>Temps hors SMED</th><td>${formatDurationHm(ipcMetrics.horsSmedMs)}</td></tr>
+          <tr><th>Part SMED</th><td>${ipcPart}</td></tr>
+        </tbody></table>
       </section>
       <section class="section">
         <h2>Prépa (HC)</h2>
@@ -3260,6 +3464,64 @@ ${buildReportHtml()}
     return items;
   }
 
+  function buildOperationRows(metrics) {
+    const rows = [];
+    phasesList.forEach(phase => {
+      (state.phases[phase] || []).forEach(op => {
+        if (!op || op.enabled === false) return;
+        const targetMs = Number(op.targetMin || 0) * 60000;
+        const realMs = metrics.operationDurations.get(op.id) || 0;
+        const gapMs = realMs - targetMs;
+        const gapPercent = targetMs ? (gapMs / targetMs) * 100 : (realMs > 0 ? 100 : 0);
+        rows.push({
+          opId: op.id,
+          opName: op.name || 'Sans nom',
+          phase,
+          family: op.family || 'Non défini',
+          workType: op.workType || 'Non défini',
+          actor: op.actor || 'Non défini',
+          targetMs,
+          realMs,
+          gapMs,
+          gapPercent
+        });
+      });
+    });
+    return rows;
+  }
+
+  function buildFamilySummary(rows) {
+    const summary = new Map();
+    rows.forEach(row => {
+      const key = row.family || 'Non défini';
+      const current = summary.get(key) || { family: key, realMs: 0, targetMs: 0 };
+      current.realMs += row.realMs;
+      current.targetMs += row.targetMs;
+      summary.set(key, current);
+    });
+    return Array.from(summary.values()).map(item => ({
+      ...item,
+      gapMs: item.realMs - item.targetMs
+    })).sort((a, b) => b.realMs - a.realMs);
+  }
+
+  function buildWorkTypeSummary(rows) {
+    const summary = new Map([
+      ['Interne', { type: 'Interne', realMs: 0, targetMs: 0 }],
+      ['Externe', { type: 'Externe', realMs: 0, targetMs: 0 }]
+    ]);
+    rows.forEach(row => {
+      if (!summary.has(row.workType)) return;
+      const current = summary.get(row.workType);
+      current.realMs += row.realMs;
+      current.targetMs += row.targetMs;
+    });
+    return Array.from(summary.values()).map(item => ({
+      ...item,
+      gapMs: item.realMs - item.targetMs
+    }));
+  }
+
   function computePerturbateurs(metrics) {
     return Array.from(metrics.eventStats.entries()).map(([label, info]) => ({
       label,
@@ -3422,6 +3684,84 @@ ${buildReportHtml()}
       : '<li class="label-muted">Aucun écart majeur</li>';
   }
 
+  function renderIpcSummary(kpi) {
+    if (!els.ipcSummary) return;
+    const metrics = computeIpcMetrics(state.ipcLastTs, state.ipcFirstTs, kpi.totalMs);
+    const partLabel = metrics.partSmed == null ? '—' : `${(metrics.partSmed * 100).toFixed(1)}%`;
+    els.ipcSummary.innerHTML = `
+      <div class="pilotage-card"><span class="label-muted">Temps inter-PO total</span><strong>${formatDurationHm(metrics.interPoMs)}</strong></div>
+      <div class="pilotage-card"><span class="label-muted">Temps SMED réel</span><strong>${formatDurationHm(metrics.smedMs)}</strong><small>Part SMED : ${partLabel}</small></div>
+      <div class="pilotage-card"><span class="label-muted">Temps hors SMED</span><strong>${formatDurationHm(metrics.horsSmedMs)}</strong></div>
+    `;
+  }
+
+  function renderExcelOperations(rows) {
+    if (!els.excelOpsBody) return;
+    if (!rows.length) {
+      els.excelOpsBody.innerHTML = '<tr><td colspan="9" class="label-muted">Aucune opération mesurée</td></tr>';
+      return;
+    }
+    els.excelOpsBody.innerHTML = rows.map(row => {
+      const ratio = row.targetMs ? row.realMs / row.targetMs : 0;
+      const rowClass = ratio > 1.1 ? 'is-bad' : ratio >= 0.85 ? 'is-warn' : 'is-good';
+      const gapLabel = `${row.gapMs >= 0 ? '+' : '−'}${formatMinutesValue(Math.abs(row.gapMs))}`;
+      const gapPercent = row.targetMs ? `${row.gapPercent >= 0 ? '+' : '−'}${Math.abs(row.gapPercent).toFixed(1)}%` : '—';
+      return `<tr class="${rowClass}"><td>${escapeHtml(row.opName)}</td><td>${escapeHtml(row.phase)}</td><td>${escapeHtml(row.family)}</td><td>${escapeHtml(row.workType)}</td><td>${escapeHtml(row.actor)}</td><td>${formatMinutesValue(row.targetMs)}</td><td>${formatMinutesValue(row.realMs)}</td><td>${gapLabel}</td><td>${gapPercent}</td></tr>`;
+    }).join('');
+  }
+
+  function renderFamilySummary(rows) {
+    if (!els.familySummaryBody) return;
+    if (!rows.length) {
+      els.familySummaryBody.innerHTML = '<tr><td colspan="4" class="label-muted">Aucune famille définie</td></tr>';
+      return;
+    }
+    els.familySummaryBody.innerHTML = rows.map(row => {
+      const gapLabel = `${row.gapMs >= 0 ? '+' : '−'}${formatDuration(Math.abs(row.gapMs))}`;
+      return `<tr><td>${escapeHtml(row.family)}</td><td>${formatDuration(row.realMs)}</td><td>${formatDuration(row.targetMs)}</td><td>${gapLabel}</td></tr>`;
+    }).join('');
+  }
+
+  function renderWorkTypeSummary(rows) {
+    if (!els.workTypeSummaryBody) return;
+    els.workTypeSummaryBody.innerHTML = rows.map(row => {
+      const gapLabel = `${row.gapMs >= 0 ? '+' : '−'}${formatDuration(Math.abs(row.gapMs))}`;
+      return `<tr><td>${escapeHtml(row.type)}</td><td>${formatDuration(row.realMs)}</td><td>${formatDuration(row.targetMs)}</td><td>${gapLabel}</td></tr>`;
+    }).join('');
+  }
+
+  function renderSimpleGantt(rows) {
+    if (!els.ganttSimpleChart) return;
+    els.ganttSimpleChart.innerHTML = '';
+    if (!rows.length) {
+      els.ganttSimpleChart.innerHTML = '<div class="label-muted">Aucune opération.</div>';
+      return;
+    }
+    const maxValue = Math.max(...rows.map(row => Math.max(row.targetMs, row.realMs)), 1);
+    rows.forEach(row => {
+      const ratio = row.targetMs ? row.realMs / row.targetMs : 0;
+      const colorClass = ratio > 1.1 ? 'bad' : ratio >= 0.85 ? 'warn' : 'good';
+      const wrapper = document.createElement('div');
+      wrapper.className = 'gantt-simple-row';
+      wrapper.innerHTML = `
+        <div class="gantt-simple-label"><span>${escapeHtml(row.opName)}</span><span>${formatMinutesValue(row.realMs)} / ${formatMinutesValue(row.targetMs)}</span></div>
+        <div class="gantt-simple-bars">
+          <div class="gantt-simple-bar"><div class="gantt-simple-fill target" style="width:${Math.min(100, (row.targetMs / maxValue) * 100).toFixed(1)}%"></div></div>
+          <div class="gantt-simple-bar"><div class="gantt-simple-fill real ${colorClass}" style="width:${Math.min(100, (row.realMs / maxValue) * 100).toFixed(1)}%"></div></div>
+        </div>
+      `;
+      els.ganttSimpleChart.appendChild(wrapper);
+    });
+  }
+
+  function updateGanttView() {
+    if (!els.simpleGanttToggle || !els.ganttChart || !els.ganttSimpleChart) return;
+    const showSimple = runtime.simpleGantt;
+    els.simpleGanttToggle.checked = showSimple;
+    els.ganttChart.hidden = showSimple;
+    els.ganttSimpleChart.hidden = !showSimple;
+  }
+
   function renderSessionHistory() {
     if (!els.sessionHistoryBody || !els.historySummary) return;
     const history = Array.isArray(state.sessionHistory) ? state.sessionHistory : [];
@@ -3435,6 +3775,7 @@ ${buildReportHtml()}
       const targetMs = totalTargetMinutesFrom(session.phases || {}) * 60000;
       const totalMs = metrics.totalRealMs || session.elapsedMs || 0;
       const gapMs = totalMs - targetMs;
+      const ipc = computeIpcMetrics(session.ipcLastTs, session.ipcFirstTs, totalMs);
       const dateLabel = new Date(session.sessionStart || Date.now()).toLocaleString('fr-FR', { hour12: false });
       const cause = session.postChange?.cause || '';
       return {
@@ -3444,6 +3785,7 @@ ${buildReportHtml()}
         targetMs,
         totalMs,
         gapMs,
+        interPoMs: ipc.interPoMs,
         cause
       };
     });
@@ -3458,7 +3800,7 @@ ${buildReportHtml()}
     `;
     els.sessionHistoryBody.innerHTML = rows.map(row => {
       const gapLabel = `${row.gapMs >= 0 ? '+' : '−'}${formatDuration(Math.abs(row.gapMs))}`;
-      return `<tr><td>${escapeHtml(row.dateLabel)}</td><td>${escapeHtml(row.line)}</td><td>${escapeHtml(row.po)}</td><td>${formatMinutesValue(row.targetMs)}</td><td>${formatDuration(row.totalMs)}</td><td>${gapLabel}</td><td>${escapeHtml(row.cause || '—')}</td></tr>`;
+      return `<tr><td>${escapeHtml(row.dateLabel)}</td><td>${escapeHtml(row.line)}</td><td>${escapeHtml(row.po)}</td><td>${formatMinutesValue(row.targetMs)}</td><td>${formatDuration(row.totalMs)}</td><td>${gapLabel}</td><td>${formatDurationHm(row.interPoMs)}</td><td>${escapeHtml(row.cause || '—')}</td></tr>`;
     }).join('');
   }
 
@@ -3466,6 +3808,9 @@ ${buildReportHtml()}
     const metrics = collectSessionMetrics();
     const phaseComparison = computePhaseComparison(metrics);
     const criticalOps = computeCriticalOps(metrics);
+    const operationRows = buildOperationRows(metrics);
+    const familySummary = buildFamilySummary(operationRows);
+    const workTypeSummary = buildWorkTypeSummary(operationRows);
     const perturbateurs = computePerturbateurs(metrics);
     const kpi = computeKPI(metrics, { phaseComparison, criticalOps });
     const insights = generateInsights({ kpi, phaseComparison, criticalOps, perturbateurs });
@@ -3570,8 +3915,14 @@ ${buildReportHtml()}
     }
 
     renderPilotageSummary(kpi);
+    renderIpcSummary(kpi);
     renderOperationsComparison(criticalOps);
     renderGantt(phaseComparison);
+    renderExcelOperations(operationRows);
+    renderFamilySummary(familySummary);
+    renderWorkTypeSummary(workTypeSummary);
+    renderSimpleGantt(operationRows);
+    updateGanttView();
     renderSessionHistory();
   }
 
@@ -3608,6 +3959,8 @@ ${buildReportHtml()}
       : '<p>Pas encore d\'insight.</p>';
     const postCause = escapeHtml(state.postChange?.cause || '—');
     const postComment = state.postChange?.comment ? escapeHtml(state.postChange.comment) : '—';
+    const ipcMetrics = computeIpcMetrics(state.ipcLastTs, state.ipcFirstTs, kpi.totalMs);
+    const ipcPart = ipcMetrics.partSmed == null ? '—' : `${(ipcMetrics.partSmed * 100).toFixed(1)}%`;
 
     const reportHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Rapport Analyse SMED</title><style>
       body{font-family:"Inter","Segoe UI",system-ui,sans-serif;background:#0f1a34;color:#e8eefc;margin:0;padding:32px;}
@@ -3649,6 +4002,17 @@ ${buildReportHtml()}
       <section>
         <h2>Perturbateurs récurrents</h2>
         ${perturbHtml}
+      </section>
+      <section>
+        <h2>Périmètre IPC</h2>
+        <table><tbody>
+          <tr><th>Dernier IPC PO N</th><td>${escapeHtml(state.ipcLastTs || '—')}</td></tr>
+          <tr><th>Premier IPC PO N+1</th><td>${escapeHtml(state.ipcFirstTs || '—')}</td></tr>
+          <tr><th>Temps inter-PO</th><td>${formatDurationHm(ipcMetrics.interPoMs)}</td></tr>
+          <tr><th>Temps SMED réel</th><td>${formatDurationHm(ipcMetrics.smedMs)}</td></tr>
+          <tr><th>Temps hors SMED</th><td>${formatDurationHm(ipcMetrics.horsSmedMs)}</td></tr>
+          <tr><th>Part SMED</th><td>${ipcPart}</td></tr>
+        </tbody></table>
       </section>
       <section>
         <h2>Post-changement</h2>
@@ -4107,6 +4471,12 @@ ${buildReportHtml()}
         const matchedIndex = state.operators.findIndex(op => (op || '').trim().toLowerCase() === operatorLabel && operatorLabel);
         const operatorIndex = matchedIndex >= 0 ? matchedIndex : state.defaultOperatorIndex;
         const enabled = includedRaw == null ? true : includedRaw.trim() !== '0';
+        const rawWorkType = typeof typeRaw === 'string' ? typeRaw.replace(/\r/g,'').trim() : '';
+        const normalizedWorkType = /^interne/i.test(rawWorkType)
+          ? 'Interne'
+          : /^externe/i.test(rawWorkType)
+            ? 'Externe'
+            : rawWorkType;
         return {
           id: newId(),
           name: cleanedName || 'Opération',
@@ -4115,7 +4485,7 @@ ${buildReportHtml()}
           enabled,
           details: typeof detailsRaw === 'string' ? detailsRaw.replace(/\r/g,'').trim() : '',
           family: typeof familyRaw === 'string' ? familyRaw.replace(/\r/g,'').trim() : '',
-          workType: typeof typeRaw === 'string' ? typeRaw.replace(/\r/g,'').trim() : '',
+          workType: normalizedWorkType,
           actor: typeof actorRaw === 'string' ? actorRaw.replace(/\r/g,'').trim() : ''
         };
       }).filter(Boolean);
@@ -4466,6 +4836,11 @@ ${buildReportHtml()}
     els.postChangeComment.value = state.postChange?.comment || '';
   }
 
+  function renderIpcForm() {
+    if (els.ipcLastTs) els.ipcLastTs.value = state.ipcLastTs || '';
+    if (els.ipcFirstTs) els.ipcFirstTs.value = state.ipcFirstTs || '';
+  }
+
   function removePresetEvent(index) {
     if (!Number.isInteger(index)) return;
     state.events.splice(index, 1);
@@ -4520,6 +4895,7 @@ ${buildReportHtml()}
     renderEventsList();
     renderReferenceLists();
     renderPostChangeForm();
+    renderIpcForm();
     renderAnalysis();
     if (els.start) {
       const hasStarted = state.marks.some(m => m.kind === 'start');
@@ -4593,6 +4969,8 @@ ${buildReportHtml()}
       state.runningSince = null;
       state.sessionStart = Date.now();
       state.sessionId = newSessionId();
+      state.ipcLastTs = '';
+      state.ipcFirstTs = '';
       state.postChange = { cause: '', comment: '' };
 
       // 2) Opérations validées -> vidage total
@@ -4712,6 +5090,29 @@ ${buildReportHtml()}
         state.postChange.comment = els.postChangeComment.value;
         saveState();
       });
+    }
+    if (els.ipcLastTs) {
+      els.ipcLastTs.addEventListener('change', () => {
+        state.ipcLastTs = els.ipcLastTs.value;
+        saveState();
+        renderAnalysis();
+      });
+    }
+    if (els.ipcFirstTs) {
+      els.ipcFirstTs.addEventListener('change', () => {
+        state.ipcFirstTs = els.ipcFirstTs.value;
+        saveState();
+        renderAnalysis();
+      });
+    }
+    if (els.simpleGanttToggle) {
+      els.simpleGanttToggle.addEventListener('change', () => {
+        runtime.simpleGantt = els.simpleGanttToggle.checked;
+        updateGanttView();
+      });
+    }
+    if (els.exportHistoryCsv) {
+      els.exportHistoryCsv.addEventListener('click', exportHistoryCsv);
     }
     // PATCH rm-toggle: suppression du toggle "seulement la courante"
     // PATCH SMED — undo dernière validation
