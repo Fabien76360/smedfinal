@@ -460,6 +460,32 @@ button:not(:disabled):active { transform:translateY(1px); }
   min-height:48px;
   transition:transform .2s ease, background .2s ease, border-color .2s ease;
 }
+.op-pill .op-main {
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  flex:1 1 auto;
+  min-width:0;
+}
+.op-pill .op-name {
+  font-weight:600;
+}
+.op-pill .op-meta {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  font-size:0.72rem;
+  color:var(--muted);
+}
+.op-pill .meta-chip {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:2px 8px;
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+}
 .op-pill .index {
   width:28px;
   height:28px;
@@ -662,7 +688,7 @@ tfoot td { font-weight:700; }
   overflow:auto;
   max-height:360px;
 }
-.param-table { width:100%; border-collapse:separate; border-spacing:0; min-width:520px; }
+.param-table { width:100%; border-collapse:separate; border-spacing:0; min-width:860px; }
 .param-table thead th {
   position:sticky;
   top:0;
@@ -807,6 +833,136 @@ summary { cursor:pointer; }
 .list-card li { font-size:0.9rem; }
 .bad { color:var(--danger); }
 .notice { padding:14px 16px; background:rgba(255,255,255,.08); border-radius:var(--radius); }
+.notice strong { font-variant-numeric:tabular-nums; }
+.analysis-extra { display:grid; gap:20px; margin-top:24px; }
+@media (min-width:1200px) {
+  .analysis-extra { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+.comparison-table-wrapper {
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--radius-lg);
+  overflow:auto;
+}
+.comparison-table {
+  width:100%;
+  border-collapse:collapse;
+  font-size:0.85rem;
+}
+.comparison-table th, .comparison-table td {
+  padding:10px 12px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.comparison-table tbody tr.is-good { background:rgba(61,220,151,.08); }
+.comparison-table tbody tr.is-warn { background:rgba(255,183,3,.08); }
+.comparison-table tbody tr.is-bad { background:rgba(239,71,111,.1); }
+.comparison-table td:last-child { font-weight:600; }
+.gantt-chart { display:grid; gap:14px; }
+.gantt-row { display:grid; gap:6px; }
+.gantt-label { display:flex; justify-content:space-between; font-size:0.82rem; color:var(--muted); }
+.gantt-bars { display:grid; gap:6px; }
+.gantt-bar {
+  height:12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.1);
+  overflow:hidden;
+  position:relative;
+}
+.gantt-fill {
+  height:100%;
+  border-radius:inherit;
+}
+.gantt-fill.target { background:rgba(61,220,151,.5); }
+.gantt-fill.real { background:var(--accent); }
+.gantt-legend { display:flex; gap:12px; font-size:0.75rem; color:var(--muted); }
+.gantt-legend span { display:inline-flex; align-items:center; gap:6px; }
+.gantt-legend span::before {
+  content:'';
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:var(--accent);
+}
+.gantt-legend span[data-kind="target"]::before { background:rgba(61,220,151,.5); }
+.gantt-simple { display:grid; gap:12px; }
+.gantt-simple-row { display:grid; gap:6px; }
+.gantt-simple-label { display:flex; justify-content:space-between; font-size:0.78rem; color:var(--muted); }
+.gantt-simple-bars { display:grid; gap:4px; }
+.gantt-simple-bar {
+  height:10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  overflow:hidden;
+}
+.gantt-simple-fill { height:100%; border-radius:inherit; }
+.gantt-simple-fill.target { background:rgba(255,255,255,.28); }
+.gantt-simple-fill.real.good { background:var(--accent); }
+.gantt-simple-fill.real.warn { background:var(--warn); }
+.gantt-simple-fill.real.bad { background:var(--danger); }
+.excel-table-wrapper { border:1px solid rgba(255,255,255,.08); border-radius:var(--radius-lg); overflow:auto; }
+.excel-table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+.excel-table th, .excel-table td { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.06); }
+.excel-table tbody tr.is-good { background:rgba(61,220,151,.08); }
+.excel-table tbody tr.is-warn { background:rgba(255,183,3,.08); }
+.excel-table tbody tr.is-bad { background:rgba(239,71,111,.1); }
+.excel-table td:last-child { font-weight:600; }
+.summary-table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+.summary-table th, .summary-table td { padding:8px 10px; border-bottom:1px solid rgba(255,255,255,.06); }
+.summary-table tbody tr.is-total { font-weight:700; }
+.ipc-grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
+.ipc-grid .pilotage-card { gap:4px; }
+.ipc-grid small { color:var(--muted); }
+.reference-grid {
+  display:grid;
+  gap:16px;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+}
+.reference-block {
+  display:grid;
+  gap:10px;
+  background:rgba(9,18,40,.6);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--radius);
+  padding:14px;
+}
+.reference-block h3 { margin:0; font-size:0.95rem; }
+.reference-list {
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:grid;
+  gap:8px;
+  max-height:180px;
+  overflow:auto;
+}
+.reference-list li {
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  font-size:0.85rem;
+}
+.reference-list button {
+  border-radius:999px;
+  padding:4px 10px;
+  font-size:0.75rem;
+}
+.pilotage-grid {
+  display:grid;
+  gap:12px;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+}
+.pilotage-card {
+  background:rgba(9,18,40,.6);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--radius);
+  padding:14px;
+  display:grid;
+  gap:6px;
+}
+.pilotage-card strong { font-size:1.2rem; font-variant-numeric:tabular-nums; }
+.history-table-wrapper { max-height:320px; overflow:auto; border-radius:var(--radius-lg); border:1px solid rgba(255,255,255,.08); }
+.history-table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+.history-table th, .history-table td { padding:8px 10px; border-bottom:1px solid rgba(255,255,255,.06); }
 .quick-event-menu {
   position:absolute;
   background:rgba(15,26,52,.95);
@@ -1203,6 +1359,41 @@ summary { cursor:pointer; }
         </form>
         <ul id="eventsList" class="events-list"></ul>
       </div>
+      <div class="panel compact reference-panel">
+        <div class="panel-title"><h2>Référentiels SMED</h2><span class="label-muted">Familles, acteurs & causes</span></div>
+        <div class="reference-grid">
+          <div class="reference-block">
+            <h3>Familles d’opérations</h3>
+            <form id="familyForm" class="event-form">
+              <div class="field">
+                <label>Nouvelle famille<input type="text" id="familyInput" placeholder="Ex : Réglage, Contrôle"></label>
+              </div>
+              <button type="submit" class="ghost">Ajouter</button>
+            </form>
+            <ul id="familyList" class="reference-list"></ul>
+          </div>
+          <div class="reference-block">
+            <h3>Acteurs</h3>
+            <form id="actorForm" class="event-form">
+              <div class="field">
+                <label>Nouvel acteur<input type="text" id="actorInput" placeholder="Ex : Maintenance"></label>
+              </div>
+              <button type="submit" class="ghost">Ajouter</button>
+            </form>
+            <ul id="actorList" class="reference-list"></ul>
+          </div>
+          <div class="reference-block">
+            <h3>Causes d’écart</h3>
+            <form id="causeForm" class="event-form">
+              <div class="field">
+                <label>Nouvelle cause<input type="text" id="causeInput" placeholder="Ex : Attente matière"></label>
+              </div>
+              <button type="submit" class="ghost">Ajouter</button>
+            </form>
+            <ul id="causeList" class="reference-list"></ul>
+          </div>
+        </div>
+      </div>
       <div class="panel compact phases-panel">
         <div class="panel-title"><h2>Phases et opérations</h2><span class="label-muted">Glisser-déposer pour réordonner</span></div>
         <div id="phaseTables"></div>
@@ -1250,18 +1441,103 @@ summary { cursor:pointer; }
             <div class="notice" id="prepaSummary"></div>
           </div>
         </div>
+        <div class="analysis-extra">
+          <div class="panel compact">
+            <div class="panel-title"><h3>Synthèse pilotage</h3><span class="label-muted">Standard vs réel</span></div>
+            <div class="pilotage-grid" id="pilotageSummary"></div>
+            <div class="list-card">
+              <h3>Top écarts</h3>
+              <ul id="pilotageTopGaps"></ul>
+            </div>
+            <div class="panel-title" style="margin-top:18px;"><h3>Périmètre IPC</h3><span class="label-muted">Inter-PO</span></div>
+            <div class="grid-two">
+              <div class="field"><label>Dernier IPC PO N<input type="datetime-local" id="ipcLastTs"></label></div>
+              <div class="field"><label>Premier IPC PO N+1<input type="datetime-local" id="ipcFirstTs"></label></div>
+            </div>
+            <div class="ipc-grid" id="ipcSummary"></div>
+          </div>
+          <div class="panel compact">
+            <div class="panel-title"><h3>Comparaison standard vs réel</h3><span class="label-muted">Opérations</span></div>
+            <div class="comparison-table-wrapper">
+              <table class="comparison-table">
+                <thead>
+                  <tr><th>Phase</th><th>Opération</th><th>Standard</th><th>Réel</th><th>Écart</th></tr>
+                </thead>
+                <tbody id="opsComparisonBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel compact">
+            <div class="panel-title"><h3>Tableau opérations (Excel)</h3><span class="label-muted">Lecture seule</span></div>
+            <div class="excel-table-wrapper">
+              <table class="excel-table">
+                <thead>
+                  <tr>
+                    <th>Opération</th><th>Phase</th><th>Famille</th><th>Interne/Externe</th><th>Acteur</th>
+                    <th>Cible (min)</th><th>Réel (min)</th><th>Écart (min)</th><th>Écart (%)</th>
+                  </tr>
+                </thead>
+                <tbody id="excelOpsBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel compact">
+            <div class="panel-title"><h3>Synthèse par famille</h3><span class="label-muted">Cible vs réel</span></div>
+            <table class="summary-table">
+              <thead><tr><th>Famille</th><th>Réel</th><th>Cible</th><th>Écart</th></tr></thead>
+              <tbody id="familySummaryBody"></tbody>
+            </table>
+          </div>
+          <div class="panel compact">
+            <div class="panel-title"><h3>Synthèse Interne / Externe</h3><span class="label-muted">Cible vs réel</span></div>
+            <table class="summary-table">
+              <thead><tr><th>Type</th><th>Réel</th><th>Cible</th><th>Écart</th></tr></thead>
+              <tbody id="workTypeSummaryBody"></tbody>
+            </table>
+          </div>
+          <div class="panel compact">
+            <div class="panel-title"><h3>Gantt performance</h3><span class="label-muted">Standard + réel</span></div>
+            <label class="switch-row" style="margin-bottom:8px;"><input id="simpleGanttToggle" type="checkbox"><span>Vue simple</span></label>
+            <div id="ganttChart" class="gantt-chart"></div>
+            <div id="ganttSimpleChart" class="gantt-simple" hidden></div>
+            <div class="gantt-legend"><span data-kind="target">Standard</span><span>Réel</span></div>
+          </div>
+          <div class="panel compact">
+            <div class="panel-title"><h3>Post-changement</h3><span class="label-muted">Optionnel après clôture</span></div>
+            <div class="field"><label>Cause principale<select id="postChangeCause"></select></label></div>
+            <div class="field"><label>Commentaire<textarea id="postChangeComment" placeholder="Observations, actions correctives..."></textarea></label></div>
+          </div>
+          <div class="panel compact">
+            <div class="panel-title"><h3>Historique sessions clôturées</h3><span class="label-muted">Multi-sessions</span></div>
+            <div class="notice" id="historySummary"></div>
+            <div class="actions-row" style="margin-bottom:12px;">
+              <button id="exportHistoryCsv" class="ghost" type="button">Exporter historique CSV</button>
+            </div>
+            <div class="history-table-wrapper">
+              <table class="history-table">
+                <thead>
+                  <tr><th>Date</th><th>Ligne</th><th>PO</th><th>Standard</th><th>Réel</th><th>Écart</th><th>Inter-PO</th><th>Cause</th></tr>
+                </thead>
+                <tbody id="sessionHistoryBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
 </div>
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+<datalist id="familyOptions"></datalist>
+<datalist id="actorOptions"></datalist>
 <script>
 (() => {
   const STORAGE_KEY = 'smed_timer_v3';
-  const SCHEMA_VERSION = 5;
+  const SCHEMA_VERSION = 7;
   const phasesList = ['Activité CHGT de PO','Début de PO','Fin de PO','Vide de ligne'];
   const timedPhases = ['Début de PO','Fin de PO','Vide de ligne'];
   function newId(){ return 'op_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+  function newSessionId(){ return 'session_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
 
   function setupLogoContainer(container) {
     if (!container) return;
@@ -1300,6 +1576,9 @@ summary { cursor:pointer; }
     line: 'L29',
     po: '',
     mode: 'up',
+    sessionId: newSessionId(),
+    ipcLastTs: '',
+    ipcFirstTs: '',
     operators: ['Opérateur A','', '', ''],
     defaultOperatorIndex: 0,
     multiView: true,
@@ -1308,19 +1587,24 @@ summary { cursor:pointer; }
     events: [],
     phases: {
       'Activité CHGT de PO': [
-        { id: newId(), name: 'Checklist sécurité', targetMin: 3, operatorIndex: 0, enabled: true, details: '' }
+        { id: newId(), name: 'Checklist sécurité', targetMin: 3, operatorIndex: 0, enabled: true, details: '', family: '', workType: '', actor: '' }
       ],
       'Début de PO': [
-        { id: newId(), name: 'Arrêt ligne', targetMin: 4, operatorIndex: 0, enabled: true, details: '' },
-        { id: newId(), name: 'Changement outillage', targetMin: 6, operatorIndex: 0, enabled: true, details: '' }
+        { id: newId(), name: 'Arrêt ligne', targetMin: 4, operatorIndex: 0, enabled: true, details: '', family: '', workType: '', actor: '' },
+        { id: newId(), name: 'Changement outillage', targetMin: 6, operatorIndex: 0, enabled: true, details: '', family: '', workType: '', actor: '' }
       ],
       'Fin de PO': [
-        { id: newId(), name: 'Redémarrage', targetMin: 5, operatorIndex: 0, enabled: true, details: '' }
+        { id: newId(), name: 'Redémarrage', targetMin: 5, operatorIndex: 0, enabled: true, details: '', family: '', workType: '', actor: '' }
       ],
       'Vide de ligne': [
-        { id: newId(), name: 'Nettoyage final', targetMin: 4, operatorIndex: 0, enabled: true, details: '' }
+        { id: newId(), name: 'Nettoyage final', targetMin: 4, operatorIndex: 0, enabled: true, details: '', family: '', workType: '', actor: '' }
       ]
     },
+    operationFamilies: ['Réglage', 'Contrôle', 'Nettoyage'],
+    operationActors: ['Production', 'Maintenance', 'Qualité'],
+    gapCauses: ['Attente matière', 'Panne', 'Réglage complexe', 'Manque de personnel'],
+    postChange: { cause: '', comment: '' },
+    sessionHistory: [],
     alertMin: 12,
     elapsedMs: 0,
     prepaElapsedMs: 0,
@@ -1388,7 +1672,35 @@ summary { cursor:pointer; }
     eventForm: document.getElementById('eventForm'),
     eventInput: document.getElementById('eventInput'),
     eventsList: document.getElementById('eventsList'),
-    splash: document.getElementById('splash')
+    splash: document.getElementById('splash'),
+    familyForm: document.getElementById('familyForm'),
+    familyInput: document.getElementById('familyInput'),
+    familyList: document.getElementById('familyList'),
+    actorForm: document.getElementById('actorForm'),
+    actorInput: document.getElementById('actorInput'),
+    actorList: document.getElementById('actorList'),
+    causeForm: document.getElementById('causeForm'),
+    causeInput: document.getElementById('causeInput'),
+    causeList: document.getElementById('causeList'),
+    familyOptions: document.getElementById('familyOptions'),
+    actorOptions: document.getElementById('actorOptions'),
+    opsComparisonBody: document.getElementById('opsComparisonBody'),
+    ganttChart: document.getElementById('ganttChart'),
+    ganttSimpleChart: document.getElementById('ganttSimpleChart'),
+    simpleGanttToggle: document.getElementById('simpleGanttToggle'),
+    pilotageSummary: document.getElementById('pilotageSummary'),
+    pilotageTopGaps: document.getElementById('pilotageTopGaps'),
+    ipcLastTs: document.getElementById('ipcLastTs'),
+    ipcFirstTs: document.getElementById('ipcFirstTs'),
+    ipcSummary: document.getElementById('ipcSummary'),
+    excelOpsBody: document.getElementById('excelOpsBody'),
+    familySummaryBody: document.getElementById('familySummaryBody'),
+    workTypeSummaryBody: document.getElementById('workTypeSummaryBody'),
+    postChangeCause: document.getElementById('postChangeCause'),
+    postChangeComment: document.getElementById('postChangeComment'),
+    historySummary: document.getElementById('historySummary'),
+    sessionHistoryBody: document.getElementById('sessionHistoryBody'),
+    exportHistoryCsv: document.getElementById('exportHistoryCsv')
   };
 
   let state = migrate(loadState());
@@ -1402,7 +1714,8 @@ summary { cursor:pointer; }
     shouldScrollToCurrent: false,
     quickEventMenu: null,
     comparisonA: 'current',
-    comparisonB: 'target'
+    comparisonB: 'target',
+    simpleGantt: false
   };
   const phaseUiState = new Map();
   const phaseSections = new Map();
@@ -1421,6 +1734,14 @@ summary { cursor:pointer; }
   function migrate(data) {
     const base = DEFAULT_STATE();
     const defaultLine = base.line;
+    if (data && Number.isFinite(data.schema_version) && data.schema_version < SCHEMA_VERSION) {
+      try {
+        const backupKey = `${STORAGE_KEY}_backup_v${data.schema_version}_${Date.now()}`;
+        localStorage.setItem(backupKey, JSON.stringify(data));
+      } catch (err) {
+        console.warn('Backup migration impossible', err);
+      }
+    }
     const merged = Object.assign(base, data || {});
     merged.schema_version = SCHEMA_VERSION;
     if (typeof merged.line !== 'string' || !merged.line.trim()) {
@@ -1439,15 +1760,36 @@ summary { cursor:pointer; }
       merged.phases[ph] = (merged.phases[ph] || []).map(op => {
         const hasEnabled = op && Object.prototype.hasOwnProperty.call(op, 'enabled');
         const enabled = hasEnabled ? !(op.enabled === false || op.enabled === 0 || op.enabled === '0') : true;
+        const rawWorkType = op && typeof op.workType === 'string' ? op.workType.trim() : '';
+        const normalizedWorkType = /^interne/i.test(rawWorkType)
+          ? 'Interne'
+          : /^externe/i.test(rawWorkType)
+            ? 'Externe'
+            : rawWorkType;
         return {
           ...op,
           id: op.id || newId(),
           enabled,
-          details: op && typeof op.details === 'string' ? op.details : ''
+          details: op && typeof op.details === 'string' ? op.details : '',
+          family: op && typeof op.family === 'string' ? op.family : '',
+          workType: normalizedWorkType,
+          actor: op && typeof op.actor === 'string' ? op.actor : '',
+          targetMin: Number.isFinite(Number(op?.targetMin)) ? Number(op.targetMin) : 0,
+          operatorIndex: Number.isFinite(Number(op?.operatorIndex)) ? Number(op.operatorIndex) : merged.defaultOperatorIndex
         };
       });
     });
     merged.completedOpsByOp = merged.completedOpsByOp || {};
+    merged.operationFamilies = Array.isArray(merged.operationFamilies) ? merged.operationFamilies.filter(Boolean) : DEFAULT_STATE().operationFamilies;
+    merged.operationActors = Array.isArray(merged.operationActors) ? merged.operationActors.filter(Boolean) : DEFAULT_STATE().operationActors;
+    merged.gapCauses = Array.isArray(merged.gapCauses) ? merged.gapCauses.filter(Boolean) : DEFAULT_STATE().gapCauses;
+    merged.postChange = merged.postChange && typeof merged.postChange === 'object'
+      ? { cause: merged.postChange.cause || '', comment: merged.postChange.comment || '' }
+      : { cause: '', comment: '' };
+    merged.sessionHistory = Array.isArray(merged.sessionHistory) ? merged.sessionHistory : [];
+    merged.sessionId = merged.sessionId || newSessionId();
+    merged.ipcLastTs = typeof merged.ipcLastTs === 'string' ? merged.ipcLastTs : '';
+    merged.ipcFirstTs = typeof merged.ipcFirstTs === 'string' ? merged.ipcFirstTs : '';
     merged.events = Array.isArray(merged.events)
       ? merged.events.map(label => typeof label === 'string' ? label.trim() : '').filter(label => label)
       : [];
@@ -1556,6 +1898,20 @@ summary { cursor:pointer; }
     return `${(ms / 60000).toFixed(digits)} min`;
   }
 
+  function formatDurationHm(ms) {
+    if (!Number.isFinite(ms)) return '—';
+    const totalMinutes = Math.max(0, Math.round(ms / 60000));
+    const h = Math.floor(totalMinutes / 60);
+    const m = String(totalMinutes % 60).padStart(2, '0');
+    return `${h}:${m}`;
+  }
+
+  function parseDateTimeValue(value) {
+    if (!value) return null;
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? null : time;
+  }
+
   function escapeHtml(value) {
     const entities = new Map([
       ['&', '&amp;'],
@@ -1578,6 +1934,16 @@ summary { cursor:pointer; }
     return String(text || '').replace(/\r?\n/g, ' / ').replace(/;/g, ',').trim();
   }
 
+  function findOperationById(opId, phases = state.phases) {
+    if (!opId) return null;
+    for (const phase of Object.keys(phases || {})) {
+      const list = phases[phase] || [];
+      const match = list.find(op => op.id === opId);
+      if (match) return { phase, operation: match };
+    }
+    return null;
+  }
+
   function targetMinutesForPhase(phase) {
     return (state.phases[phase] || [])
       .filter(op => op.enabled !== false)
@@ -1585,6 +1951,42 @@ summary { cursor:pointer; }
   }
   function totalTargetMinutes() {
     return timedPhases.reduce((sum, phase) => sum + targetMinutesForPhase(phase), 0);
+  }
+
+  function computeIpcMetrics(ipcLastTs, ipcFirstTs, smedMs) {
+    const lastMs = parseDateTimeValue(ipcLastTs);
+    const firstMs = parseDateTimeValue(ipcFirstTs);
+    if (!lastMs || !firstMs || firstMs <= lastMs) {
+      return {
+        ipcLastMs: lastMs,
+        ipcFirstMs: firstMs,
+        interPoMs: null,
+        smedMs,
+        horsSmedMs: null,
+        partSmed: null
+      };
+    }
+    const interPoMs = firstMs - lastMs;
+    const horsSmedMs = Math.max(0, interPoMs - smedMs);
+    const partSmed = interPoMs ? smedMs / interPoMs : null;
+    return {
+      ipcLastMs: lastMs,
+      ipcFirstMs: firstMs,
+      interPoMs,
+      smedMs,
+      horsSmedMs,
+      partSmed
+    };
+  }
+
+  function targetMinutesForPhaseFrom(phases, phase) {
+    return (phases[phase] || [])
+      .filter(op => op.enabled !== false)
+      .reduce((sum, op) => sum + Number(op.targetMin || 0), 0);
+  }
+
+  function totalTargetMinutesFrom(phases) {
+    return timedPhases.reduce((sum, phase) => sum + targetMinutesForPhaseFrom(phases, phase), 0);
   }
 
   function updateTargets() {
@@ -1824,8 +2226,38 @@ summary { cursor:pointer; }
         const indexSpan = document.createElement('span');
         indexSpan.className = 'index';
         indexSpan.textContent = opIndex + 1;
+        const mainWrap = document.createElement('div');
+        mainWrap.className = 'op-main';
         const nameSpan = document.createElement('span');
+        nameSpan.className = 'op-name';
         nameSpan.textContent = operation.name || '';
+        const metaSpan = document.createElement('span');
+        metaSpan.className = 'op-meta';
+        const targetChip = document.createElement('span');
+        targetChip.className = 'meta-chip';
+        const targetValue = Number.isFinite(Number(operation.targetMin)) ? Number(operation.targetMin).toFixed(1) : '—';
+        targetChip.textContent = `Cible ${targetValue} min`;
+        metaSpan.appendChild(targetChip);
+        if (operation.family) {
+          const familyChip = document.createElement('span');
+          familyChip.className = 'meta-chip';
+          familyChip.textContent = operation.family;
+          metaSpan.appendChild(familyChip);
+        }
+        if (operation.workType) {
+          const typeChip = document.createElement('span');
+          typeChip.className = 'meta-chip';
+          typeChip.textContent = operation.workType;
+          metaSpan.appendChild(typeChip);
+        }
+        if (operation.actor) {
+          const actorChip = document.createElement('span');
+          actorChip.className = 'meta-chip';
+          actorChip.textContent = operation.actor;
+          metaSpan.appendChild(actorChip);
+        }
+        mainWrap.appendChild(nameSpan);
+        mainWrap.appendChild(metaSpan);
         const checkSpan = document.createElement('span');
         checkSpan.className = 'check';
         checkSpan.textContent = '✔';
@@ -1847,7 +2279,7 @@ summary { cursor:pointer; }
         });
         actionsWrap.appendChild(noteBtn);
         pill.appendChild(indexSpan);
-        pill.appendChild(nameSpan);
+        pill.appendChild(mainWrap);
         pill.appendChild(checkSpan);
         pill.appendChild(actionsWrap);
         pill.addEventListener('click', () => validateOperation(idx, operation));
@@ -2300,6 +2732,33 @@ summary { cursor:pointer; }
     showToast(`Événement HC ajouté pour ${operatorName}`);
   }
 
+  function archiveCurrentSession() {
+    if (!Array.isArray(state.sessionHistory)) state.sessionHistory = [];
+    if (!state.sessionId) state.sessionId = newSessionId();
+    if (state.sessionHistory.some(item => item.sessionId === state.sessionId)) return;
+    const snapshot = {
+      sessionId: state.sessionId,
+      sessionStart: state.sessionStart,
+      sessionEnd: Date.now(),
+      line: state.line,
+      po: state.po,
+      mode: state.mode,
+      operators: [...state.operators],
+      phases: JSON.parse(JSON.stringify(state.phases)),
+      marks: state.marks.map(mark => ({ ...mark })),
+      elapsedMs: state.elapsedMs,
+      prepaElapsedMs: state.prepaElapsedMs,
+      ipcLastTs: state.ipcLastTs || '',
+      ipcFirstTs: state.ipcFirstTs || '',
+      postChange: { ...(state.postChange || { cause: '', comment: '' }) }
+    };
+    state.sessionHistory.unshift(snapshot);
+    if (state.sessionHistory.length > 30) {
+      state.sessionHistory = state.sessionHistory.slice(0, 30);
+    }
+    saveState();
+  }
+
   async function finishChange() {
     if (state.marks.some(m => m.kind === 'end')) return;
     if (state.runningSince) {
@@ -2314,6 +2773,7 @@ summary { cursor:pointer; }
       state.runningSince = null;
     }
     addEvent('Fin du changement', { kind: 'end' });
+    archiveCurrentSession();
     cancelAnimationFrame(runtime.animationFrame);
     updateDisplay();
     showToast('Changement terminé');
@@ -2365,7 +2825,11 @@ summary { cursor:pointer; }
 
   function exportCsv() {
     const target = totalTargetMinutes();
-    const headers = ['date_session','line','po','mode','hors_chrono','target_min_global','idx','horodatage','duree_ms','duree_hms','operateur','phase','evenement','note'];
+    const headers = [
+      'date_session','line','po','mode','hors_chrono','target_min_global','idx','horodatage','duree_ms','duree_hms',
+      'operateur','phase','evenement','note','operation_id','operation_name','operation_target_min','operation_family',
+      'operation_type','operation_actor','cause_ecart','commentaire_ecart','ipc_last_ts','ipc_first_ts'
+    ];
     const rows = state.marks.map((mark, idx) => [
       new Date(state.sessionStart).toISOString(),
       state.line,
@@ -2380,13 +2844,104 @@ summary { cursor:pointer; }
       mark.operator || '',
       mark.phase,
       mark.label,
-      mark.note || ''
+      mark.note || '',
+      mark.opId || '',
+      (() => {
+        const found = findOperationById(mark.opId);
+        return found ? found.operation.name || '' : '';
+      })(),
+      (() => {
+        const found = findOperationById(mark.opId);
+        return found ? Number(found.operation.targetMin || 0) : '';
+      })(),
+      (() => {
+        const found = findOperationById(mark.opId);
+        return found ? found.operation.family || '' : '';
+      })(),
+      (() => {
+        const found = findOperationById(mark.opId);
+        return found ? found.operation.workType || '' : '';
+      })(),
+      (() => {
+        const found = findOperationById(mark.opId);
+        return found ? found.operation.actor || '' : '';
+      })(),
+      state.postChange?.cause || '',
+      state.postChange?.comment || '',
+      state.ipcLastTs || '',
+      state.ipcFirstTs || ''
     ]);
     const csv = [headers.join(';')].concat(rows.map(r => r.map(value => `"${String(value).replace(/"/g,'""')}"`).join(';'))).join('\n');
     const rawLine = state.line && state.line.trim() ? state.line.trim() : 'L29';
     const lineSegment = rawLine.replace(/[^\w-]+/g, '_') || 'L29';
     const stamp = new Date().toISOString().slice(0,16).replace(/:/g, '-');
     downloadFile(`smed_${lineSegment}_${stamp}.csv`, `\uFEFF${csv}`, 'text/csv;charset=utf-8');
+  }
+
+  function exportHistoryCsv() {
+    const history = Array.isArray(state.sessionHistory) ? state.sessionHistory : [];
+    if (!history.length) {
+      showToast('Historique vide', 'info');
+      return;
+    }
+    const headers = [
+      'date_session','line','po','mode','target_min','real_min','gap_min',
+      'ipc_last_ts','ipc_first_ts','interpo_min','part_smed_percent','cause_ecart','commentaire_ecart',
+      'families_summary','interne_real_min','interne_target_min','externe_real_min','externe_target_min'
+    ];
+    const rows = history.map(session => {
+      const metrics = collectSessionMetricsFrom(session);
+      const rowsByOp = [];
+      Object.keys(session.phases || {}).forEach(phase => {
+        (session.phases[phase] || []).forEach(op => {
+          if (!op || op.enabled === false) return;
+          const targetMs = Number(op.targetMin || 0) * 60000;
+          const realMs = metrics.operationDurations.get(op.id) || 0;
+          rowsByOp.push({
+            family: op.family || 'Non défini',
+            workType: op.workType || 'Non défini',
+            targetMs,
+            realMs
+          });
+        });
+      });
+      const familySummary = buildFamilySummary(rowsByOp);
+      const workTypeSummary = buildWorkTypeSummary(rowsByOp);
+      const familyLabel = familySummary.length
+        ? familySummary.map(item => `${item.family}:${(item.realMs / 60000).toFixed(1)}/${(item.targetMs / 60000).toFixed(1)}`).join(' | ')
+        : '—';
+      const targetMs = totalTargetMinutesFrom(session.phases || {}) * 60000;
+      const totalMs = metrics.totalRealMs || session.elapsedMs || 0;
+      const gapMs = totalMs - targetMs;
+      const ipc = computeIpcMetrics(session.ipcLastTs, session.ipcFirstTs, totalMs);
+      const partSmed = ipc.partSmed == null ? '' : (ipc.partSmed * 100).toFixed(1);
+      const interPoMin = ipc.interPoMs == null ? '' : (ipc.interPoMs / 60000).toFixed(1);
+      const interne = workTypeSummary.find(item => item.type === 'Interne') || { realMs: 0, targetMs: 0 };
+      const externe = workTypeSummary.find(item => item.type === 'Externe') || { realMs: 0, targetMs: 0 };
+      return [
+        new Date(session.sessionStart || Date.now()).toISOString(),
+        session.line || '',
+        session.po || '',
+        session.mode || '',
+        (targetMs / 60000).toFixed(1),
+        (totalMs / 60000).toFixed(1),
+        (gapMs / 60000).toFixed(1),
+        session.ipcLastTs || '',
+        session.ipcFirstTs || '',
+        interPoMin,
+        partSmed,
+        session.postChange?.cause || '',
+        session.postChange?.comment || '',
+        familyLabel,
+        (interne.realMs / 60000).toFixed(1),
+        (interne.targetMs / 60000).toFixed(1),
+        (externe.realMs / 60000).toFixed(1),
+        (externe.targetMs / 60000).toFixed(1)
+      ];
+    });
+    const csv = [headers.join(';')].concat(rows.map(r => r.map(value => `"${String(value).replace(/"/g,'""')}"`).join(';'))).join('\n');
+    const stamp = new Date().toISOString().slice(0,16).replace(/:/g, '-');
+    downloadFile(`smed_historique_${stamp}.csv`, `\uFEFF${csv}`, 'text/csv;charset=utf-8');
   }
 
   async function exportHtml(options = {}) {
@@ -2474,6 +3029,8 @@ ${buildReportHtml()}
   function buildReportHtml() {
     const analysis = computeAnalysis();
     const kpi = analysis.kpi;
+    const metrics = collectSessionMetrics();
+    const criticalOps = computeCriticalOps(metrics);
     const sessionDate = new Date(state.sessionStart).toLocaleString('fr-FR', { hour12: false });
     const safePo = escapeHtml(state.po || '—');
     const safeLine = escapeHtml(state.line || 'Ligne');
@@ -2497,6 +3054,17 @@ ${buildReportHtml()}
     const prepaNotes = analysis.prepa.notes.length
       ? `<ul>${analysis.prepa.notes.map(note => `<li>${escapeHtml(note)}</li>`).join('')}</ul>`
       : '<p class="muted">Aucun commentaire</p>';
+    const opsComparisonRows = criticalOps.length
+      ? criticalOps.slice(0, 12).map(op => {
+        const gapMs = op.realMs - op.targetMs;
+        const gapLabel = `${gapMs >= 0 ? '+' : '−'}${formatMinutesValue(Math.abs(gapMs))}`;
+        return `<tr><td>${escapeHtml(op.phase)}</td><td>${escapeHtml(op.opName)}</td><td>${formatMinutesValue(op.targetMs)}</td><td>${formatMinutesValue(op.realMs)}</td><td>${gapLabel}</td></tr>`;
+      }).join('')
+      : '<tr><td colspan="5" class="muted">Aucune opération mesurée</td></tr>';
+    const postCause = escapeHtml(state.postChange?.cause || '—');
+    const postComment = state.postChange?.comment ? escapeHtml(state.postChange.comment) : '—';
+    const ipcMetrics = computeIpcMetrics(state.ipcLastTs, state.ipcFirstTs, kpi.total);
+    const ipcPart = ipcMetrics.partSmed == null ? '—' : `${(ipcMetrics.partSmed * 100).toFixed(1)}%`;
     const journalRows = state.marks.length
       ? state.marks.map((mark, idx) => `<tr><td>${idx + 1}</td><td>${formatDuration(mark.t)}</td><td>${formatDuration(mark.durationMs || 0)}</td><td>${mark.hc ? '<span class="badge hc">HC</span>' : 'Non'}</td><td>${escapeHtml(mark.phase)}</td><td>${escapeHtml(mark.operator || '')}</td><td>${escapeHtml(mark.label)}</td><td>${escapeHtml(mark.note || '')}</td></tr>`).join('')
       : '<tr><td colspan="8" class="muted">Journal vide</td></tr>';
@@ -2534,6 +3102,21 @@ ${buildReportHtml()}
         </div>
       </section>
       <section class="section">
+        <h2>Comparaison standard vs réel</h2>
+        <table class="data-table"><thead><tr><th>Phase</th><th>Opération</th><th>Standard</th><th>Réel</th><th>Écart</th></tr></thead><tbody>${opsComparisonRows}</tbody></table>
+      </section>
+      <section class="section">
+        <h2>Périmètre IPC</h2>
+        <table class="data-table"><tbody>
+          <tr><th>Dernier IPC PO N</th><td>${escapeHtml(state.ipcLastTs || '—')}</td></tr>
+          <tr><th>Premier IPC PO N+1</th><td>${escapeHtml(state.ipcFirstTs || '—')}</td></tr>
+          <tr><th>Temps inter-PO</th><td>${formatDurationHm(ipcMetrics.interPoMs)}</td></tr>
+          <tr><th>Temps SMED réel</th><td>${formatDurationHm(ipcMetrics.smedMs)}</td></tr>
+          <tr><th>Temps hors SMED</th><td>${formatDurationHm(ipcMetrics.horsSmedMs)}</td></tr>
+          <tr><th>Part SMED</th><td>${ipcPart}</td></tr>
+        </tbody></table>
+      </section>
+      <section class="section">
         <h2>Prépa (HC)</h2>
         <div class="prepa-card">
           <div><span class="badge hc">HC</span> Checklist complétée à <strong>${analysis.prepa.percent}%</strong></div>
@@ -2541,6 +3124,10 @@ ${buildReportHtml()}
           <div>Commentaires :</div>
           ${prepaNotes}
         </div>
+      </section>
+      <section class="section">
+        <h2>Post-changement</h2>
+        <table class="data-table"><tbody><tr><th>Cause principale</th><td>${postCause}</td></tr><tr><th>Commentaire</th><td>${postComment}</td></tr></tbody></table>
       </section>
       <section class="section">
         <h2>Journal des événements</h2>
@@ -2710,6 +3297,89 @@ ${buildReportHtml()}
     };
   }
 
+  function collectSessionMetricsFrom(session) {
+    const phaseDurations = new Map();
+    const operationDurations = new Map();
+    const eventStats = new Map();
+    let previousTime = 0;
+    let totalTimedMs = 0;
+    let totalTimelineMs = 0;
+    let vaMs = 0;
+    let imprevusMs = 0;
+    let nonVaMs = 0;
+    const marks = Array.isArray(session.marks) ? session.marks.slice().sort((a, b) => (a.t || 0) - (b.t || 0)) : [];
+    const phases = session.phases || {};
+    let phaseContext = marks.length ? marks[0].phase : 'Début de PO';
+    const hasMarks = marks.length > 0;
+    let hasHcMarks = false;
+
+    marks.forEach(mark => {
+      const duration = mark.durationMs || Math.max(0, (mark.t || 0) - previousTime);
+      const isPhaseChange = mark.kind === 'event' && mark.label && mark.label.toLowerCase().includes('changement de phase');
+      const attributedPhase = isPhaseChange ? phaseContext : (mark.phase || phaseContext);
+      const isTimedPhase = timedPhases.includes(attributedPhase);
+      const isHc = mark.hc || attributedPhase === 'Activité CHGT de PO';
+      if (isHc) hasHcMarks = true;
+
+      totalTimelineMs += duration;
+
+      if (isTimedPhase && !isHc) {
+        totalTimedMs += duration;
+        phaseDurations.set(attributedPhase, (phaseDurations.get(attributedPhase) || 0) + duration);
+        if (mark.kind === 'op') {
+          vaMs += duration;
+          if (mark.opId) {
+            operationDurations.set(mark.opId, (operationDurations.get(mark.opId) || 0) + duration);
+          }
+        } else if (mark.kind === 'event' && !isPhaseChange) {
+          imprevusMs += duration;
+          if (mark.label) {
+            const current = eventStats.get(mark.label) || { count: 0, totalMs: 0 };
+            current.count += 1;
+            current.totalMs += duration;
+            eventStats.set(mark.label, current);
+          }
+        } else {
+          nonVaMs += duration;
+        }
+      } else {
+        nonVaMs += duration;
+        if (mark.kind === 'event' && mark.label && !isPhaseChange) {
+          const current = eventStats.get(mark.label) || { count: 0, totalMs: 0 };
+          current.count += 1;
+          current.totalMs += duration;
+          eventStats.set(mark.label, current);
+        }
+      }
+
+      previousTime = mark.t || 0;
+      phaseContext = mark.phase || attributedPhase;
+    });
+
+    if (!hasMarks) {
+      totalTimedMs = session.elapsedMs || 0;
+      totalTimelineMs = totalTimedMs + (session.prepaElapsedMs || 0);
+      vaMs = totalTimedMs;
+      nonVaMs += session.prepaElapsedMs || 0;
+    } else if (!hasHcMarks && session.prepaElapsedMs) {
+      nonVaMs += session.prepaElapsedMs;
+      totalTimelineMs += session.prepaElapsedMs;
+    } else {
+      totalTimelineMs = Math.max(totalTimelineMs, totalTimedMs);
+    }
+
+    return {
+      totalRealMs: totalTimedMs,
+      totalTimelineMs,
+      vaMs,
+      imprevusMs,
+      nonVaMs,
+      phaseDurations,
+      operationDurations,
+      eventStats
+    };
+  }
+
   function computeKPI(metrics, extras = {}) {
     const targetMs = totalTargetMinutes() * 60000;
     const totalMs = metrics.totalRealMs || state.elapsedMs || 0;
@@ -2783,12 +3453,73 @@ ${buildReportHtml()}
           gapMs,
           gapPercent,
           hasFire: gapPercent > 120,
-          details: op.details || ''
+          details: op.details || '',
+          family: op.family || '',
+          workType: op.workType || '',
+          actor: op.actor || ''
         });
       });
     });
     items.sort((a, b) => (b.gapPercent || 0) - (a.gapPercent || 0));
     return items;
+  }
+
+  function buildOperationRows(metrics) {
+    const rows = [];
+    phasesList.forEach(phase => {
+      (state.phases[phase] || []).forEach(op => {
+        if (!op || op.enabled === false) return;
+        const targetMs = Number(op.targetMin || 0) * 60000;
+        const realMs = metrics.operationDurations.get(op.id) || 0;
+        const gapMs = realMs - targetMs;
+        const gapPercent = targetMs ? (gapMs / targetMs) * 100 : (realMs > 0 ? 100 : 0);
+        rows.push({
+          opId: op.id,
+          opName: op.name || 'Sans nom',
+          phase,
+          family: op.family || 'Non défini',
+          workType: op.workType || 'Non défini',
+          actor: op.actor || 'Non défini',
+          targetMs,
+          realMs,
+          gapMs,
+          gapPercent
+        });
+      });
+    });
+    return rows;
+  }
+
+  function buildFamilySummary(rows) {
+    const summary = new Map();
+    rows.forEach(row => {
+      const key = row.family || 'Non défini';
+      const current = summary.get(key) || { family: key, realMs: 0, targetMs: 0 };
+      current.realMs += row.realMs;
+      current.targetMs += row.targetMs;
+      summary.set(key, current);
+    });
+    return Array.from(summary.values()).map(item => ({
+      ...item,
+      gapMs: item.realMs - item.targetMs
+    })).sort((a, b) => b.realMs - a.realMs);
+  }
+
+  function buildWorkTypeSummary(rows) {
+    const summary = new Map([
+      ['Interne', { type: 'Interne', realMs: 0, targetMs: 0 }],
+      ['Externe', { type: 'Externe', realMs: 0, targetMs: 0 }]
+    ]);
+    rows.forEach(row => {
+      if (!summary.has(row.workType)) return;
+      const current = summary.get(row.workType);
+      current.realMs += row.realMs;
+      current.targetMs += row.targetMs;
+    });
+    return Array.from(summary.values()).map(item => ({
+      ...item,
+      gapMs: item.realMs - item.targetMs
+    }));
   }
 
   function computePerturbateurs(metrics) {
@@ -2893,10 +3624,193 @@ ${buildReportHtml()}
     els.comparisonChart.innerHTML = `${svg}<div class="comparison-legend"><span data-color="accent">${escapeHtml(sessionA.label)}</span><span data-color="warn">${escapeHtml(sessionB.label)}</span></div>`;
   }
 
+  function renderOperationsComparison(criticalOps) {
+    if (!els.opsComparisonBody) return;
+    if (!criticalOps.length) {
+      els.opsComparisonBody.innerHTML = '<tr><td colspan="5" class="label-muted">Aucune opération mesurée</td></tr>';
+      return;
+    }
+    els.opsComparisonBody.innerHTML = criticalOps.map(op => {
+      const ratio = op.targetMs ? op.realMs / op.targetMs : 0;
+      const rowClass = ratio > 1.1 ? 'is-bad' : ratio >= 0.85 ? 'is-warn' : 'is-good';
+      const standard = formatMinutesValue(op.targetMs);
+      const real = formatMinutesValue(op.realMs);
+      const gapMs = op.realMs - op.targetMs;
+      const gapLabel = `${gapMs >= 0 ? '+' : '−'}${formatMinutesValue(Math.abs(gapMs))}`;
+      return `<tr class="${rowClass}"><td>${escapeHtml(op.phase)}</td><td>${escapeHtml(op.opName)}</td><td>${standard}</td><td>${real}</td><td>${gapLabel}</td></tr>`;
+    }).join('');
+  }
+
+  function renderGantt(phaseComparison) {
+    if (!els.ganttChart) return;
+    els.ganttChart.innerHTML = '';
+    if (!phaseComparison.length) {
+      els.ganttChart.innerHTML = '<div class="label-muted">Pas de données de phases.</div>';
+      return;
+    }
+    const maxValue = Math.max(...phaseComparison.map(item => Math.max(item.targetMs, item.realMs)), 1);
+    phaseComparison.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'gantt-row';
+      const label = document.createElement('div');
+      label.className = 'gantt-label';
+      label.innerHTML = `<span>${escapeHtml(item.phase)}</span><span>${formatMinutesValue(item.realMs)} / ${formatMinutesValue(item.targetMs)}</span>`;
+      const bars = document.createElement('div');
+      bars.className = 'gantt-bars';
+      const targetBar = document.createElement('div');
+      targetBar.className = 'gantt-bar';
+      targetBar.innerHTML = `<div class="gantt-fill target" style="width:${Math.min(100, (item.targetMs / maxValue) * 100).toFixed(1)}%"></div>`;
+      const realBar = document.createElement('div');
+      realBar.className = 'gantt-bar';
+      realBar.innerHTML = `<div class="gantt-fill real" style="width:${Math.min(100, (item.realMs / maxValue) * 100).toFixed(1)}%"></div>`;
+      bars.append(targetBar, realBar);
+      row.append(label, bars);
+      els.ganttChart.appendChild(row);
+    });
+  }
+
+  function renderPilotageSummary(kpi) {
+    if (!els.pilotageSummary || !els.pilotageTopGaps) return;
+    const gapLabel = formatDuration(Math.abs(kpi.gapMs || 0));
+    const gapSign = kpi.gapMs >= 0 ? '+' : '−';
+    els.pilotageSummary.innerHTML = `
+      <div class="pilotage-card"><span class="label-muted">Standard global</span><strong>${formatMinutesValue(kpi.targetMs)}</strong></div>
+      <div class="pilotage-card"><span class="label-muted">Réel session</span><strong>${formatDuration(kpi.totalMs)}</strong></div>
+      <div class="pilotage-card"><span class="label-muted">Écart</span><strong>${gapSign}${gapLabel}</strong></div>
+      <div class="pilotage-card"><span class="label-muted">Performance</span><strong>${Number.isFinite(kpi.performancePercent) ? kpi.performancePercent.toFixed(1) : '0.0'}%</strong></div>
+    `;
+    els.pilotageTopGaps.innerHTML = kpi.topLosses.length
+      ? kpi.topLosses.map(item => `<li>${escapeHtml(item.label)} · ${formatDuration(item.gapMs)}</li>`).join('')
+      : '<li class="label-muted">Aucun écart majeur</li>';
+  }
+
+  function renderIpcSummary(kpi) {
+    if (!els.ipcSummary) return;
+    const metrics = computeIpcMetrics(state.ipcLastTs, state.ipcFirstTs, kpi.totalMs);
+    const partLabel = metrics.partSmed == null ? '—' : `${(metrics.partSmed * 100).toFixed(1)}%`;
+    els.ipcSummary.innerHTML = `
+      <div class="pilotage-card"><span class="label-muted">Temps inter-PO total</span><strong>${formatDurationHm(metrics.interPoMs)}</strong></div>
+      <div class="pilotage-card"><span class="label-muted">Temps SMED réel</span><strong>${formatDurationHm(metrics.smedMs)}</strong><small>Part SMED : ${partLabel}</small></div>
+      <div class="pilotage-card"><span class="label-muted">Temps hors SMED</span><strong>${formatDurationHm(metrics.horsSmedMs)}</strong></div>
+    `;
+  }
+
+  function renderExcelOperations(rows) {
+    if (!els.excelOpsBody) return;
+    if (!rows.length) {
+      els.excelOpsBody.innerHTML = '<tr><td colspan="9" class="label-muted">Aucune opération mesurée</td></tr>';
+      return;
+    }
+    els.excelOpsBody.innerHTML = rows.map(row => {
+      const ratio = row.targetMs ? row.realMs / row.targetMs : 0;
+      const rowClass = ratio > 1.1 ? 'is-bad' : ratio >= 0.85 ? 'is-warn' : 'is-good';
+      const gapLabel = `${row.gapMs >= 0 ? '+' : '−'}${formatMinutesValue(Math.abs(row.gapMs))}`;
+      const gapPercent = row.targetMs ? `${row.gapPercent >= 0 ? '+' : '−'}${Math.abs(row.gapPercent).toFixed(1)}%` : '—';
+      return `<tr class="${rowClass}"><td>${escapeHtml(row.opName)}</td><td>${escapeHtml(row.phase)}</td><td>${escapeHtml(row.family)}</td><td>${escapeHtml(row.workType)}</td><td>${escapeHtml(row.actor)}</td><td>${formatMinutesValue(row.targetMs)}</td><td>${formatMinutesValue(row.realMs)}</td><td>${gapLabel}</td><td>${gapPercent}</td></tr>`;
+    }).join('');
+  }
+
+  function renderFamilySummary(rows) {
+    if (!els.familySummaryBody) return;
+    if (!rows.length) {
+      els.familySummaryBody.innerHTML = '<tr><td colspan="4" class="label-muted">Aucune famille définie</td></tr>';
+      return;
+    }
+    els.familySummaryBody.innerHTML = rows.map(row => {
+      const gapLabel = `${row.gapMs >= 0 ? '+' : '−'}${formatDuration(Math.abs(row.gapMs))}`;
+      return `<tr><td>${escapeHtml(row.family)}</td><td>${formatDuration(row.realMs)}</td><td>${formatDuration(row.targetMs)}</td><td>${gapLabel}</td></tr>`;
+    }).join('');
+  }
+
+  function renderWorkTypeSummary(rows) {
+    if (!els.workTypeSummaryBody) return;
+    els.workTypeSummaryBody.innerHTML = rows.map(row => {
+      const gapLabel = `${row.gapMs >= 0 ? '+' : '−'}${formatDuration(Math.abs(row.gapMs))}`;
+      return `<tr><td>${escapeHtml(row.type)}</td><td>${formatDuration(row.realMs)}</td><td>${formatDuration(row.targetMs)}</td><td>${gapLabel}</td></tr>`;
+    }).join('');
+  }
+
+  function renderSimpleGantt(rows) {
+    if (!els.ganttSimpleChart) return;
+    els.ganttSimpleChart.innerHTML = '';
+    if (!rows.length) {
+      els.ganttSimpleChart.innerHTML = '<div class="label-muted">Aucune opération.</div>';
+      return;
+    }
+    const maxValue = Math.max(...rows.map(row => Math.max(row.targetMs, row.realMs)), 1);
+    rows.forEach(row => {
+      const ratio = row.targetMs ? row.realMs / row.targetMs : 0;
+      const colorClass = ratio > 1.1 ? 'bad' : ratio >= 0.85 ? 'warn' : 'good';
+      const wrapper = document.createElement('div');
+      wrapper.className = 'gantt-simple-row';
+      wrapper.innerHTML = `
+        <div class="gantt-simple-label"><span>${escapeHtml(row.opName)}</span><span>${formatMinutesValue(row.realMs)} / ${formatMinutesValue(row.targetMs)}</span></div>
+        <div class="gantt-simple-bars">
+          <div class="gantt-simple-bar"><div class="gantt-simple-fill target" style="width:${Math.min(100, (row.targetMs / maxValue) * 100).toFixed(1)}%"></div></div>
+          <div class="gantt-simple-bar"><div class="gantt-simple-fill real ${colorClass}" style="width:${Math.min(100, (row.realMs / maxValue) * 100).toFixed(1)}%"></div></div>
+        </div>
+      `;
+      els.ganttSimpleChart.appendChild(wrapper);
+    });
+  }
+
+  function updateGanttView() {
+    if (!els.simpleGanttToggle || !els.ganttChart || !els.ganttSimpleChart) return;
+    const showSimple = runtime.simpleGantt;
+    els.simpleGanttToggle.checked = showSimple;
+    els.ganttChart.hidden = showSimple;
+    els.ganttSimpleChart.hidden = !showSimple;
+  }
+
+  function renderSessionHistory() {
+    if (!els.sessionHistoryBody || !els.historySummary) return;
+    const history = Array.isArray(state.sessionHistory) ? state.sessionHistory : [];
+    if (!history.length) {
+      els.sessionHistoryBody.innerHTML = '<tr><td colspan="7" class="label-muted">Aucune session clôturée enregistrée.</td></tr>';
+      els.historySummary.textContent = 'Historique vide pour le moment.';
+      return;
+    }
+    const rows = history.map(session => {
+      const metrics = collectSessionMetricsFrom(session);
+      const targetMs = totalTargetMinutesFrom(session.phases || {}) * 60000;
+      const totalMs = metrics.totalRealMs || session.elapsedMs || 0;
+      const gapMs = totalMs - targetMs;
+      const ipc = computeIpcMetrics(session.ipcLastTs, session.ipcFirstTs, totalMs);
+      const dateLabel = new Date(session.sessionStart || Date.now()).toLocaleString('fr-FR', { hour12: false });
+      const cause = session.postChange?.cause || '';
+      return {
+        dateLabel,
+        line: session.line || '—',
+        po: session.po || '—',
+        targetMs,
+        totalMs,
+        gapMs,
+        interPoMs: ipc.interPoMs,
+        cause
+      };
+    });
+    const avgTarget = rows.reduce((sum, row) => sum + row.targetMs, 0) / rows.length;
+    const avgReal = rows.reduce((sum, row) => sum + row.totalMs, 0) / rows.length;
+    const avgGap = avgReal - avgTarget;
+    const best = rows.reduce((acc, row) => (row.gapMs < acc.gapMs ? row : acc), rows[0]);
+    const worst = rows.reduce((acc, row) => (row.gapMs > acc.gapMs ? row : acc), rows[0]);
+    els.historySummary.innerHTML = `
+      <div><strong>${rows.length}</strong> sessions · Moyenne réel <strong>${formatDuration(avgReal)}</strong> · Écart moyen <strong>${avgGap >= 0 ? '+' : '−'}${formatDuration(Math.abs(avgGap))}</strong></div>
+      <div>Meilleure: ${best.po} (${best.gapMs >= 0 ? '+' : '−'}${formatDuration(Math.abs(best.gapMs))}) · Pire: ${worst.po} (${worst.gapMs >= 0 ? '+' : '−'}${formatDuration(Math.abs(worst.gapMs))})</div>
+    `;
+    els.sessionHistoryBody.innerHTML = rows.map(row => {
+      const gapLabel = `${row.gapMs >= 0 ? '+' : '−'}${formatDuration(Math.abs(row.gapMs))}`;
+      return `<tr><td>${escapeHtml(row.dateLabel)}</td><td>${escapeHtml(row.line)}</td><td>${escapeHtml(row.po)}</td><td>${formatMinutesValue(row.targetMs)}</td><td>${formatDuration(row.totalMs)}</td><td>${gapLabel}</td><td>${formatDurationHm(row.interPoMs)}</td><td>${escapeHtml(row.cause || '—')}</td></tr>`;
+    }).join('');
+  }
+
   function renderAdvancedAnalysis() {
     const metrics = collectSessionMetrics();
     const phaseComparison = computePhaseComparison(metrics);
     const criticalOps = computeCriticalOps(metrics);
+    const operationRows = buildOperationRows(metrics);
+    const familySummary = buildFamilySummary(operationRows);
+    const workTypeSummary = buildWorkTypeSummary(operationRows);
     const perturbateurs = computePerturbateurs(metrics);
     const kpi = computeKPI(metrics, { phaseComparison, criticalOps });
     const insights = generateInsights({ kpi, phaseComparison, criticalOps, perturbateurs });
@@ -2999,6 +3913,17 @@ ${buildReportHtml()}
       els.comparisonSessionB.value = runtime.comparisonB;
       renderComparisonChart(snapshots, timedPhases);
     }
+
+    renderPilotageSummary(kpi);
+    renderIpcSummary(kpi);
+    renderOperationsComparison(criticalOps);
+    renderGantt(phaseComparison);
+    renderExcelOperations(operationRows);
+    renderFamilySummary(familySummary);
+    renderWorkTypeSummary(workTypeSummary);
+    renderSimpleGantt(operationRows);
+    updateGanttView();
+    renderSessionHistory();
   }
 
   function renderAnalysis() {
@@ -3032,6 +3957,10 @@ ${buildReportHtml()}
     const insightsHtml = insights.length
       ? `<ul>${insights.map(text => `<li>${escapeHtml(text)}</li>`).join('')}</ul>`
       : '<p>Pas encore d\'insight.</p>';
+    const postCause = escapeHtml(state.postChange?.cause || '—');
+    const postComment = state.postChange?.comment ? escapeHtml(state.postChange.comment) : '—';
+    const ipcMetrics = computeIpcMetrics(state.ipcLastTs, state.ipcFirstTs, kpi.totalMs);
+    const ipcPart = ipcMetrics.partSmed == null ? '—' : `${(ipcMetrics.partSmed * 100).toFixed(1)}%`;
 
     const reportHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Rapport Analyse SMED</title><style>
       body{font-family:"Inter","Segoe UI",system-ui,sans-serif;background:#0f1a34;color:#e8eefc;margin:0;padding:32px;}
@@ -3074,6 +4003,21 @@ ${buildReportHtml()}
         <h2>Perturbateurs récurrents</h2>
         ${perturbHtml}
       </section>
+      <section>
+        <h2>Périmètre IPC</h2>
+        <table><tbody>
+          <tr><th>Dernier IPC PO N</th><td>${escapeHtml(state.ipcLastTs || '—')}</td></tr>
+          <tr><th>Premier IPC PO N+1</th><td>${escapeHtml(state.ipcFirstTs || '—')}</td></tr>
+          <tr><th>Temps inter-PO</th><td>${formatDurationHm(ipcMetrics.interPoMs)}</td></tr>
+          <tr><th>Temps SMED réel</th><td>${formatDurationHm(ipcMetrics.smedMs)}</td></tr>
+          <tr><th>Temps hors SMED</th><td>${formatDurationHm(ipcMetrics.horsSmedMs)}</td></tr>
+          <tr><th>Part SMED</th><td>${ipcPart}</td></tr>
+        </tbody></table>
+      </section>
+      <section>
+        <h2>Post-changement</h2>
+        <table><tbody><tr><th>Cause principale</th><td>${postCause}</td></tr><tr><th>Commentaire</th><td>${postComment}</td></tr></tbody></table>
+      </section>
       <section class="insights">
         <h2>Insights Kaizen</h2>
         ${insightsHtml}
@@ -3106,10 +4050,20 @@ ${buildReportHtml()}
             <div class="phase-toolbar" data-phase-toolbar></div>
             <table class="param-table" data-phase="${phase}">
               <thead>
-                <tr><th title="Inclure cette opération dans le SMED (décocher si non applicable)">Incluse ?</th><th>Opération</th><th>Temps cible (min)</th><th>Opérateur</th><th>Détails (optionnel)</th><th></th></tr>
+                <tr>
+                  <th title="Inclure cette opération dans le SMED (décocher si non applicable)">Incluse ?</th>
+                  <th>Opération</th>
+                  <th>Temps cible (min)</th>
+                  <th>Famille</th>
+                  <th>Type</th>
+                  <th>Acteur</th>
+                  <th>Opérateur</th>
+                  <th>Détails (optionnel)</th>
+                  <th></th>
+                </tr>
               </thead>
               <tbody></tbody>
-              <tfoot><tr><td colspan="6">Σ ${phase}: <strong class="phase-total">0 min</strong></td></tr></tfoot>
+              <tfoot><tr><td colspan="9">Σ ${phase}: <strong class="phase-total">0 min</strong></td></tr></tfoot>
             </table>
           </div>
         </details>
@@ -3254,7 +4208,7 @@ ${buildReportHtml()}
         headerRow.dataset.kind = 'group-header';
         headerRow.dataset.operatorIndex = operatorIndex;
         const cell = document.createElement('td');
-        cell.colSpan = 6;
+        cell.colSpan = 9;
         cell.className = 'op-group-header';
         cell.setAttribute('role', 'rowheader');
         cell.textContent = `Opérateur : ${formatOperatorName(operatorIndex)}`;
@@ -3304,6 +4258,15 @@ ${buildReportHtml()}
       <td><input type="checkbox" data-field="enabled" title="Inclure cette opération dans le SMED (décocher si non applicable)" ${enabled ? 'checked' : ''}></td>
       <td><input type="text" data-field="name" value="${escapeHtml(operation.name || '')}"></td>
       <td><input type="number" step="0.5" min="0" data-field="targetMin" value="${operation.targetMin || 0}"></td>
+      <td><input type="text" data-field="family" list="familyOptions" value="${escapeHtml(operation.family || '')}" placeholder="Famille"></td>
+      <td>
+        <select data-field="workType">
+          <option value="">—</option>
+          <option value="Interne"${operation.workType === 'Interne' ? ' selected' : ''}>Interne</option>
+          <option value="Externe"${operation.workType === 'Externe' ? ' selected' : ''}>Externe</option>
+        </select>
+      </td>
+      <td><input type="text" data-field="actor" list="actorOptions" value="${escapeHtml(operation.actor || '')}" placeholder="Acteur"></td>
       <td><select data-field="operatorIndex"></select></td>
       <td><textarea data-field="details" placeholder="Checklist, sous-étapes, remarques…">${escapeHtml(operation.details || '')}</textarea></td>
       <td class="row-tools"><button type="button" class="ghost" data-action="delete">Suppr.</button></td>
@@ -3355,10 +4318,22 @@ ${buildReportHtml()}
       updateAnalysisDelayed();
       return;
     }
-    if (field === 'name') {
+    if (['name', 'details', 'family', 'actor', 'workType'].includes(field)) {
       state.phases[phase][idx][field] = input.value;
-    } else if (field === 'details') {
-      state.phases[phase][idx][field] = input.value;
+      if (field === 'family') {
+        const trimmed = input.value.trim();
+        if (trimmed && !state.operationFamilies.includes(trimmed)) {
+          state.operationFamilies.push(trimmed);
+          renderReferenceLists();
+        }
+      }
+      if (field === 'actor') {
+        const trimmed = input.value.trim();
+        if (trimmed && !state.operationActors.includes(trimmed)) {
+          state.operationActors.push(trimmed);
+          renderReferenceLists();
+        }
+      }
     } else {
       const numeric = Number(input.value);
       if (field === 'operatorIndex') {
@@ -3396,7 +4371,17 @@ ${buildReportHtml()}
     const phase = btn.dataset.phase;
     const action = btn.dataset.action;
     if (action === 'add') {
-      state.phases[phase].push({ id: newId(), name: 'Nouvelle opération', targetMin: 1, operatorIndex: state.defaultOperatorIndex, enabled: true, details: '' });
+      state.phases[phase].push({
+        id: newId(),
+        name: 'Nouvelle opération',
+        targetMin: 1,
+        operatorIndex: state.defaultOperatorIndex,
+        enabled: true,
+        details: '',
+        family: '',
+        workType: '',
+        actor: ''
+      });
       saveState(true);
       buildPhaseTables();
       renderOperatorColumns();
@@ -3444,9 +4429,9 @@ ${buildReportHtml()}
       const rows = state.phases[phase].map(op => {
         const operatorIdx = typeof op.operatorIndex === 'number' ? op.operatorIndex : state.defaultOperatorIndex;
         const operatorLabel = getCurrentOperatorName(operatorIdx || 0);
-        return `${op.name};${op.targetMin};${operatorLabel};${op.enabled === false ? 0 : 1};${sanitizeCsvText(op.details)}`;
+        return `${op.name};${op.targetMin};${operatorLabel};${op.enabled === false ? 0 : 1};${sanitizeCsvText(op.details)};${sanitizeCsvText(op.family)};${sanitizeCsvText(op.workType)};${sanitizeCsvText(op.actor)}`;
       });
-      const csvContent = ['operation;temps_min;operateur;incluse;details'].concat(rows).join('\n');
+      const csvContent = ['operation;temps_min;operateur;incluse;details;famille;type;acteur'].concat(rows).join('\n');
       downloadFile(`phase_${phase.replace(/\s+/g,'_')}.csv`, `\uFEFF${csvContent}`, 'text/csv;charset=utf-8');
     }
     if (action === 'export-json') {
@@ -3477,24 +4462,45 @@ ${buildReportHtml()}
         const operator = parts[2];
         const includedRaw = parts[3];
         const detailsRaw = parts[4];
+        const familyRaw = parts[5];
+        const typeRaw = parts[6];
+        const actorRaw = parts[7];
         const cleanedName = (name || '').trim();
         const numeric = Number.parseFloat((time || '').replace(',', '.'));
         const operatorLabel = (operator || '').trim().toLowerCase();
         const matchedIndex = state.operators.findIndex(op => (op || '').trim().toLowerCase() === operatorLabel && operatorLabel);
         const operatorIndex = matchedIndex >= 0 ? matchedIndex : state.defaultOperatorIndex;
         const enabled = includedRaw == null ? true : includedRaw.trim() !== '0';
+        const rawWorkType = typeof typeRaw === 'string' ? typeRaw.replace(/\r/g,'').trim() : '';
+        const normalizedWorkType = /^interne/i.test(rawWorkType)
+          ? 'Interne'
+          : /^externe/i.test(rawWorkType)
+            ? 'Externe'
+            : rawWorkType;
         return {
           id: newId(),
           name: cleanedName || 'Opération',
           targetMin: Number.isFinite(numeric) ? numeric : 0,
           operatorIndex,
           enabled,
-          details: typeof detailsRaw === 'string' ? detailsRaw.replace(/\r/g,'').trim() : ''
+          details: typeof detailsRaw === 'string' ? detailsRaw.replace(/\r/g,'').trim() : '',
+          family: typeof familyRaw === 'string' ? familyRaw.replace(/\r/g,'').trim() : '',
+          workType: normalizedWorkType,
+          actor: typeof actorRaw === 'string' ? actorRaw.replace(/\r/g,'').trim() : ''
         };
       }).filter(Boolean);
       if (entries.length) {
         state.phases[phase] = entries;
+        entries.forEach(entry => {
+          if (entry.family && !state.operationFamilies.includes(entry.family)) {
+            state.operationFamilies.push(entry.family);
+          }
+          if (entry.actor && !state.operationActors.includes(entry.actor)) {
+            state.operationActors.push(entry.actor);
+          }
+        });
         saveState(true);
+        renderReferenceLists();
         buildPhaseTables();
         renderOperatorColumns();
         updateTargets();
@@ -3723,6 +4729,118 @@ ${buildReportHtml()}
     });
   }
 
+  function renderDatalist(listEl, values) {
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    values.forEach(value => {
+      const option = document.createElement('option');
+      option.value = value;
+      listEl.appendChild(option);
+    });
+  }
+
+  function renderReferenceLists() {
+    if (els.familyList) {
+      els.familyList.innerHTML = '';
+      const items = state.operationFamilies || [];
+      if (!items.length) {
+        els.familyList.innerHTML = '<li class="label-muted">Aucune famille définie</li>';
+      } else {
+        items.forEach((value, index) => {
+          const item = document.createElement('li');
+          const span = document.createElement('span');
+          span.textContent = value;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'ghost';
+          btn.textContent = 'Suppr.';
+          btn.addEventListener('click', () => {
+            state.operationFamilies.splice(index, 1);
+            saveState();
+            renderReferenceLists();
+            refreshPhaseTable(state.activePhase);
+          });
+          item.append(span, btn);
+          els.familyList.appendChild(item);
+        });
+      }
+    }
+    if (els.actorList) {
+      els.actorList.innerHTML = '';
+      const items = state.operationActors || [];
+      if (!items.length) {
+        els.actorList.innerHTML = '<li class="label-muted">Aucun acteur défini</li>';
+      } else {
+        items.forEach((value, index) => {
+          const item = document.createElement('li');
+          const span = document.createElement('span');
+          span.textContent = value;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'ghost';
+          btn.textContent = 'Suppr.';
+          btn.addEventListener('click', () => {
+            state.operationActors.splice(index, 1);
+            saveState();
+            renderReferenceLists();
+            refreshPhaseTable(state.activePhase);
+          });
+          item.append(span, btn);
+          els.actorList.appendChild(item);
+        });
+      }
+    }
+    if (els.causeList) {
+      els.causeList.innerHTML = '';
+      const items = state.gapCauses || [];
+      if (!items.length) {
+        els.causeList.innerHTML = '<li class="label-muted">Aucune cause définie</li>';
+      } else {
+        items.forEach((value, index) => {
+          const item = document.createElement('li');
+          const span = document.createElement('span');
+          span.textContent = value;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'ghost';
+          btn.textContent = 'Suppr.';
+          btn.addEventListener('click', () => {
+            state.gapCauses.splice(index, 1);
+            saveState();
+            renderReferenceLists();
+            renderPostChangeForm();
+          });
+          item.append(span, btn);
+          els.causeList.appendChild(item);
+        });
+      }
+    }
+    renderDatalist(els.familyOptions, state.operationFamilies || []);
+    renderDatalist(els.actorOptions, state.operationActors || []);
+    renderPostChangeForm();
+  }
+
+  function renderPostChangeForm() {
+    if (!els.postChangeCause || !els.postChangeComment) return;
+    if (!state.postChange || typeof state.postChange !== 'object') {
+      state.postChange = { cause: '', comment: '' };
+    }
+    els.postChangeCause.innerHTML = '<option value="">—</option>';
+    (state.gapCauses || []).forEach(cause => {
+      const option = document.createElement('option');
+      option.value = cause;
+      option.textContent = cause;
+      els.postChangeCause.appendChild(option);
+    });
+    els.postChangeCause.value = state.postChange?.cause || '';
+    els.postChangeComment.value = state.postChange?.comment || '';
+  }
+
+  function renderIpcForm() {
+    if (els.ipcLastTs) els.ipcLastTs.value = state.ipcLastTs || '';
+    if (els.ipcFirstTs) els.ipcFirstTs.value = state.ipcFirstTs || '';
+  }
+
   function removePresetEvent(index) {
     if (!Number.isInteger(index)) return;
     state.events.splice(index, 1);
@@ -3740,6 +4858,20 @@ ${buildReportHtml()}
     els.eventInput.value = '';
     saveState(true);
     renderEventsList();
+  }
+
+  function handleReferenceSubmit(event, listKey, inputEl) {
+    event.preventDefault();
+    if (!inputEl) return;
+    const value = inputEl.value.trim();
+    if (!value) return;
+    if (!Array.isArray(state[listKey])) state[listKey] = [];
+    if (!state[listKey].includes(value)) {
+      state[listKey].push(value);
+      saveState(true);
+      renderReferenceLists();
+    }
+    inputEl.value = '';
   }
 
   function updateBrandLine() {
@@ -3761,6 +4893,9 @@ ${buildReportHtml()}
     buildPhaseTables();
     buildDefaultsForm();
     renderEventsList();
+    renderReferenceLists();
+    renderPostChangeForm();
+    renderIpcForm();
     renderAnalysis();
     if (els.start) {
       const hasStarted = state.marks.some(m => m.kind === 'start');
@@ -3833,6 +4968,10 @@ ${buildReportHtml()}
       state.sessionElapsedMs = 0;
       state.runningSince = null;
       state.sessionStart = Date.now();
+      state.sessionId = newSessionId();
+      state.ipcLastTs = '';
+      state.ipcFirstTs = '';
+      state.postChange = { cause: '', comment: '' };
 
       // 2) Opérations validées -> vidage total
       state.completedOpsByOp = {};
@@ -3929,6 +5068,51 @@ ${buildReportHtml()}
     });
     if (els.eventForm) {
       els.eventForm.addEventListener('submit', handleEventFormSubmit);
+    }
+    if (els.familyForm) {
+      els.familyForm.addEventListener('submit', event => handleReferenceSubmit(event, 'operationFamilies', els.familyInput));
+    }
+    if (els.actorForm) {
+      els.actorForm.addEventListener('submit', event => handleReferenceSubmit(event, 'operationActors', els.actorInput));
+    }
+    if (els.causeForm) {
+      els.causeForm.addEventListener('submit', event => handleReferenceSubmit(event, 'gapCauses', els.causeInput));
+    }
+    if (els.postChangeCause) {
+      els.postChangeCause.addEventListener('change', () => {
+        state.postChange.cause = els.postChangeCause.value;
+        saveState();
+        renderAnalysis();
+      });
+    }
+    if (els.postChangeComment) {
+      els.postChangeComment.addEventListener('input', () => {
+        state.postChange.comment = els.postChangeComment.value;
+        saveState();
+      });
+    }
+    if (els.ipcLastTs) {
+      els.ipcLastTs.addEventListener('change', () => {
+        state.ipcLastTs = els.ipcLastTs.value;
+        saveState();
+        renderAnalysis();
+      });
+    }
+    if (els.ipcFirstTs) {
+      els.ipcFirstTs.addEventListener('change', () => {
+        state.ipcFirstTs = els.ipcFirstTs.value;
+        saveState();
+        renderAnalysis();
+      });
+    }
+    if (els.simpleGanttToggle) {
+      els.simpleGanttToggle.addEventListener('change', () => {
+        runtime.simpleGantt = els.simpleGanttToggle.checked;
+        updateGanttView();
+      });
+    }
+    if (els.exportHistoryCsv) {
+      els.exportHistoryCsv.addEventListener('click', exportHistoryCsv);
     }
     // PATCH rm-toggle: suppression du toggle "seulement la courante"
     // PATCH SMED — undo dernière validation
